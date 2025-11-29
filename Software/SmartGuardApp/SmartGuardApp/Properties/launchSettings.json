@@ -1,0 +1,12 @@
+{
+  "profiles": {
+    "Windows Machine": {
+      "commandName": "Project",
+      "nativeDebugging": false
+    },
+    "Android Emulator": {
+      "commandName": "Project",
+      "targetFramework": "net9.0-android"
+    }
+  }
+}

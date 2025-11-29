@@ -1,0 +1,129 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:models="clr-namespace:SmartGuardApp.Models"
+             x:Class="SmartGuardApp.MainPage"
+             Title="SmartGuard - Units">
+
+    <Grid RowDefinitions="Auto,*,Auto">
+        <!-- Header -->
+        <Border Grid.Row="0" 
+                BackgroundColor="{StaticResource Primary}"
+                Padding="20,15"
+                StrokeThickness="0">
+            <Label Text="Smart Home Units"
+                   TextColor="White"
+                   FontSize="24"
+                   FontAttributes="Bold"
+                   HorizontalOptions="Center" />
+        </Border>
+
+        <!-- Content Area -->
+        <RefreshView x:Name="RefreshView"
+                     Grid.Row="1"
+                     Refreshing="OnRefreshing"
+                     IsRefreshing="{Binding IsRefreshing}">
+            <ScrollView>
+                <Grid>
+                    <!-- Loading Indicator -->
+                    <ActivityIndicator x:Name="LoadingIndicator"
+                                     IsRunning="{Binding IsLoading}"
+                                     IsVisible="{Binding IsLoading}"
+                                     Color="{StaticResource Primary}"
+                                     VerticalOptions="Center"
+                                     HorizontalOptions="Center"
+                                     HeightRequest="50"
+                                     WidthRequest="50" />
+
+                    <!-- Units List -->
+                    <CollectionView x:Name="UnitsCollectionView"
+                                  SelectionMode="None"
+                                  IsVisible="False">
+                        <CollectionView.ItemTemplate>
+                            <DataTemplate x:DataType="models:Sensor">
+                                <Border StrokeThickness="0"
+                                      Padding="0"
+                                      Margin="10,5"
+                                      BackgroundColor="White">
+                                    <Border.StrokeShape>
+                                        <RoundRectangle CornerRadius="10" />
+                                    </Border.StrokeShape>
+                                    <Border.Shadow>
+                                        <Shadow Brush="Black"
+                                              Offset="0,2"
+                                              Radius="5"
+                                              Opacity="0.2" />
+                                    </Border.Shadow>
+                                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="15">
+                                        <VerticalStackLayout Grid.Column="0"
+                                                           Spacing="5">
+                                            <Label Text="{Binding Name, TargetNullValue='Unnamed Unit'}"
+                                                 FontSize="18"
+                                                 FontAttributes="Bold"
+                                                 TextColor="{StaticResource Primary}" />
+                                            <Label FontSize="12"
+                                                 TextColor="{StaticResource Gray500}">
+                                                <Label.Text>
+                                                    <MultiBinding StringFormat="Unit ID: {0} | Switch: {1}">
+                                                        <Binding Path="UnitId" TargetNullValue="N/A" />
+                                                        <Binding Path="SwitchNo" />
+                                                    </MultiBinding>
+                                                </Label.Text>
+                                            </Label>
+                                        </VerticalStackLayout>
+
+                                        <VerticalStackLayout Grid.Column="1"
+                                                           Spacing="5"
+                                                           VerticalOptions="Center">
+                                            <Switch IsToggled="{Binding IsOn}"
+                                                  Toggled="OnUnitSwitchToggled"
+                                                  OnColor="{StaticResource Secondary}"
+                                                  ThumbColor="black"                                                        
+                                                  HorizontalOptions="Center" />
+                                        </VerticalStackLayout>
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </CollectionView.ItemTemplate>
+
+                        <CollectionView.EmptyView>
+                            <VerticalStackLayout HorizontalOptions="Center"
+                                               VerticalOptions="Center"
+                                               Spacing="10"
+                                               Padding="40">
+                                <Label Text="No units found"
+                                     FontSize="18"
+                                     TextColor="{StaticResource Gray500}"
+                                     HorizontalOptions="Center" />
+                                <Label Text="Pull down to refresh"
+                                     FontSize="14"
+                                     TextColor="{StaticResource Gray400}"
+                                     HorizontalOptions="Center" />
+                            </VerticalStackLayout>
+                        </CollectionView.EmptyView>
+                    </CollectionView>
+
+                    <!-- Error Message -->
+                    <Label x:Name="ErrorLabel"
+                         Text="{Binding ErrorMessage}"
+                         IsVisible="{Binding HasError}"
+                         TextColor="Red"
+                         FontSize="14"
+                         HorizontalOptions="Center"
+                         VerticalOptions="Center"
+                         Margin="20" />
+                </Grid>
+            </ScrollView>
+        </RefreshView>
+
+        <!-- Footer/Refresh Button -->
+        <Button Grid.Row="2"
+              Text="Refresh Units"
+              Clicked="OnRefreshClicked"
+              BackgroundColor="{StaticResource Secondary}"
+              TextColor="White"
+              Margin="20,10"
+              CornerRadius="8" />
+    </Grid>
+
+</ContentPage>
