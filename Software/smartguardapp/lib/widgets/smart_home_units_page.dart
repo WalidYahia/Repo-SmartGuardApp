@@ -44,26 +44,38 @@ class _SmartHomeUnitsPageState extends State<SmartHomeUnitsPage> {
     }
   }
 
-  Future<void> toggleUnit(String sensorId, bool newState) async {
-    try {
-      await _apiService.toggleUnit(sensorId, newState);
-      // Reload units to get updated state
-      await loadUnits();
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e')),
-        );
-      }
-      rethrow;
+  Future<void> toggleUnit(String sensorId, bool currentState) async {
+  try {
+    final updatedSensor = await _apiService.toggleUnit(sensorId, currentState);
+    
+    if (updatedSensor != null) {
+      // Update the specific unit in the list without reloading everything
+      setState(() {
+        final index = units.indexWhere((u) => u.sensorId == sensorId);
+        if (index != -1) {
+          units[index] = updatedSensor;
+        }
+      });
+    }
+  } catch (e) {
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('$e')),
+      );
     }
   }
+}
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('My Home'),
+        title: const Text('My Units', 
+        style: TextStyle(
+        color: Colors.blueAccent,
+        fontWeight: FontWeight.w600,
+      ),),
+        
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
@@ -129,7 +141,7 @@ class _SmartHomeUnitsPageState extends State<SmartHomeUnitsPage> {
           final unit = units[index];
           return UnitListItem(
             unit: unit,
-            onToggle: (newState) => toggleUnit(unit.sensorId, newState),
+            onToggle: (newState) => toggleUnit(unit.sensorId, unit.isOn),
           );
         },
       ),

@@ -49,7 +49,8 @@ class _UnitListItemState extends State<UnitListItem> {
           widget.unit.name,
           style: const TextStyle(
             fontSize: 16,
-            fontWeight: FontWeight.w500,
+            fontWeight: FontWeight.w600,
+            color: Colors.blueAccent
           ),
         ),
         subtitle: Padding(
@@ -70,7 +71,7 @@ class _UnitListItemState extends State<UnitListItem> {
               )
             : Switch(
                 value: widget.unit.isOn,
-                activeThumbColor: Colors.lightBlue,
+                activeThumbColor: Colors.blueAccent,
                 onChanged: (newState) async {
                   setState(() => isToggling = true);
                   try {
