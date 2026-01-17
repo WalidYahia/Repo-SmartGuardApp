@@ -10,11 +10,11 @@ import '../models/sensor_dto_mini.dart';
 
 class MqttService {
 
-  // static const String hubId = "SmartGuard-WALID";
-  // static const String clientId = 'MobileApp-Emulator';
+  static const String hubId = "SmartGuard-WALID";
+  static const String clientId = 'MobileApp-Emulator';
 
-  static const String hubId = "SmartGuard-000000002e5c0c51";
-  static const String clientId = 'MobileApp-1';
+  // static const String hubId = "SmartGuard-000000002e5c0c51";
+  // static const String clientId = 'MobileApp-1';
 
   //   static const String hubId = "SmartGuard-000000002e5c0c51";
   // static const String clientId = 'Tablet-1';

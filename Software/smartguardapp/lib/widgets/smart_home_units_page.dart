@@ -188,8 +188,8 @@ class _SmartHomeUnitsPageState extends State<SmartHomeUnitsPage> {
       ),
       body: Column(
         children: [
-          Expanded(child: _buildBody()),
-          const AppFooter(),
+          Expanded(child: _buildBody())//,
+          //const AppFooter(),
         ],
       ),
     );

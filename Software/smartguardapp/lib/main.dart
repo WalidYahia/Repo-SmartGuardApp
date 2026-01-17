@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'widgets/smart_home_units_page.dart';
+// import 'widgets/smart_home_units_page.dart';
+import 'widgets/main_container_page.dart';
 
 void main() {
   runApp(const MyApp());
@@ -21,7 +22,7 @@ class MyApp extends StatelessWidget {
           elevation: 2,
         ),
       ),
-      home: const SmartHomeUnitsPage(),
+      home: const MainContainerPage(),
     );
   }
 }
