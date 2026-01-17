@@ -1,7 +1,6 @@
 // lib/pages/scenarios_page.dart
 
 import 'package:flutter/material.dart';
-import '../widgets/app_footer.dart';
 
 class ScenariosPage extends StatefulWidget {
   const ScenariosPage({Key? key}) : super(key: key);

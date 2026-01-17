@@ -1,7 +1,6 @@
 // lib/pages/users_page.dart
 
 import 'package:flutter/material.dart';
-import '../widgets/app_footer.dart';
 
 class UsersPage extends StatefulWidget {
   const UsersPage({Key? key}) : super(key: key);

@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:smartguardapp/widgets/MyContainer.dart';
 // import 'widgets/smart_home_units_page.dart';
-import 'widgets/main_container_page.dart';
 
 void main() {
   runApp(const MyApp());

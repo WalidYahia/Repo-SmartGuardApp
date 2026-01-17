@@ -7,14 +7,21 @@ import 'package:mqtt_client/mqtt_client.dart';
 import 'package:mqtt_client/mqtt_server_client.dart';
 import '../models/apiResponse.dart';
 import '../models/sensor_dto_mini.dart';
+import 'package:flutter/foundation.dart'; // Add this import
+
+// Add this helper function outside the class
+List<SensorDTO_Mini> _parseDevices(String payload) {
+  final List<dynamic> jsonData = json.decode(payload);
+  return jsonData.map((json) => SensorDTO_Mini.fromJson(json)).toList();
+}
 
 class MqttService {
 
-  static const String hubId = "SmartGuard-WALID";
-  static const String clientId = 'MobileApp-Emulator';
+  // static const String hubId = "SmartGuard-WALID";
+  // static const String clientId = 'MobileApp-Emulator';
 
-  // static const String hubId = "SmartGuard-000000002e5c0c51";
-  // static const String clientId = 'MobileApp-1';
+  static const String hubId = "SmartGuard-000000002e5c0c51";
+  static const String clientId = 'MobileApp-1';
 
   //   static const String hubId = "SmartGuard-000000002e5c0c51";
   // static const String clientId = 'Tablet-1';
@@ -165,14 +172,16 @@ class MqttService {
     });
   }
 
-void _handleDevicesMessage(String payload) {
+void _handleDevicesMessage(String payload) async {
   try {
-    final List<dynamic> jsonData = json.decode(payload);
-    _latestDevices = jsonData.map((json) => SensorDTO_Mini.fromJson(json)).toList();
+    // ✅ Parse on background thread
+    final devices = await compute(_parseDevices, payload);
+    _latestDevices = devices;
+    
+    _devicesStreamController ??= StreamController<List<SensorDTO_Mini>>.broadcast();
     _devicesStreamController!.add(_latestDevices);
   } catch (e) {
-    // Silently ignore parsing errors
-    print('Error parsing ACK message: $e');
+    print('Error parsing devices message: $e');
   }
 }
 

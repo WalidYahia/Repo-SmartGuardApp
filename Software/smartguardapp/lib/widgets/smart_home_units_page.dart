@@ -1,39 +1,36 @@
-// lib/pages/smart_home_units_page.dart
-
-import 'dart:async';
-
 import 'package:flutter/material.dart';
+import 'package:smartguardapp/models/sensor_dto_mini.dart';
+import 'dart:async';
 import '../services/unified_smart_home_service.dart';
-import '../models/sensor_dto_mini.dart';
 import '../widgets/unit_list_item.dart';
 
 class SmartHomeUnitsPage extends StatefulWidget {
-  const SmartHomeUnitsPage({Key? key}) : super(key: key);
+  final UnifiedSmartHomeService connectionService;
+
+  const SmartHomeUnitsPage({Key? key, required this.connectionService}) : super(key: key);
 
   @override
   State<SmartHomeUnitsPage> createState() => _SmartHomeUnitsPageState();
 }
 
 class _SmartHomeUnitsPageState extends State<SmartHomeUnitsPage> {
-  final UnifiedSmartHomeService _service = UnifiedSmartHomeService();
+  late final UnifiedSmartHomeService _service;
   List<SensorDTO_Mini> units = [];
   bool isLoading = true;
   String? errorMessage;
   StreamSubscription<List<SensorDTO_Mini>>? _devicesSubscription;
-  String? _expandedUnitId; // Track which unit is expanded
+  String? _expandedUnitId;
 
   @override
   void initState() {
     super.initState();
+    _service = widget.connectionService;
     _initialize();
   }
 
   Future<void> _initialize() async {
-    // Initialize and determine connection mode once
-    //await _service.initialize();
-    
     // Subscribe to devices stream if using MQTT
-    _service.subscribeToDevicesStream((devices) {
+    _devicesSubscription = _service.subscribeToDevicesStream((devices) {
       if (mounted) {
         setState(() {
           units = devices;
@@ -42,16 +39,10 @@ class _SmartHomeUnitsPageState extends State<SmartHomeUnitsPage> {
         });
       }
     });
-    
-    // Load units after initialization
+
+    // Load units
     loadUnits();
   }
-  // Future<void> _initialize() async {
-  //   // Initialize and determine connection mode once
-  //   await _service.initialize();
-  //   // Load units after initialization
-  //   loadUnits();
-  // }
 
   Future<void> loadUnits() async {
     setState(() {
@@ -85,7 +76,7 @@ class _SmartHomeUnitsPageState extends State<SmartHomeUnitsPage> {
     }
   }
 
-   Future<void> toggleUnit(String sensorId, bool newState) async {
+  Future<void> toggleUnit(String sensorId, bool newState) async {
     try {
       final updatedSensor = await _service.toggleUnit(sensorId, newState);
       
@@ -147,19 +138,10 @@ class _SmartHomeUnitsPageState extends State<SmartHomeUnitsPage> {
     super.dispose();
   }
 
-@override
+  @override
   Widget build(BuildContext context) {
-     return Scaffold(
-      body: Column(
-        children: [
-          Expanded(child: _buildBody())//,
-          //const AppFooter(),
-        ],
-      ),
-    );
+    return _buildBody();
   }
-
-
 
   Widget _buildBody() {
     if (isLoading) {
@@ -177,7 +159,7 @@ class _SmartHomeUnitsPageState extends State<SmartHomeUnitsPage> {
               const SizedBox(height: 16),
               Text(
                 errorMessage!,
-                style: const TextStyle(color: Colors.red),
+                style: const TextStyle(color: Colors.red, fontSize: 16),
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 16),
@@ -213,6 +195,7 @@ class _SmartHomeUnitsPageState extends State<SmartHomeUnitsPage> {
         itemBuilder: (context, index) {
           final unit = units[index];
           return UnitListItem(
+            key: ValueKey(unit.sensorId), // ✅ Add this
             unit: unit,
             isExpanded: _expandedUnitId == unit.sensorId,
             onTap: () {

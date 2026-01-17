@@ -51,6 +51,16 @@ Future<List<SensorDTO_Mini>> fetchUnits() async {
   }
 }
 
+Future<void> ping() async {
+  final response = await http
+      .get(Uri.parse('$baseUrl/ping'))
+      .timeout(const Duration(seconds: 5));
+
+  if (response.statusCode != 200) {
+    throw Exception('HTTP ping failed');
+  }
+}
+
 // Toggle unit on/off and return updated sensor data
 Future<SensorDTO_Mini?> toggleUnit(String sensorId, bool currentState) async {
   try {

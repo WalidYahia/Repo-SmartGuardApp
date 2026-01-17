@@ -1,5 +1,6 @@
 // lib/services/unified_smart_home_service.dart
 
+import 'dart:async';
 import '../models/sensor_dto_mini.dart';
 import 'smart_home_api_service.dart';
 import 'mqtt_service.dart';
@@ -12,7 +13,7 @@ enum ConnectionMode {
 class UnifiedSmartHomeService {
   final SmartHomeApiService _httpService = SmartHomeApiService();
   final MqttService _mqttService = MqttService();
-  
+
   ConnectionMode? _selectedMode;
   bool _isInitialized = false;
 
@@ -23,124 +24,108 @@ class UnifiedSmartHomeService {
 
   // Get current connection mode
   ConnectionMode? get selectedMode => _selectedMode;
-  
+
   // Check if service is initialized
   bool get isInitialized => _isInitialized;
 
   // Check if MQTT is connected
   bool get isMqttConnected => _mqttService.isConnected;
 
-  // Subscribe to devices stream (for MQTT mode)
-  void subscribeToDevicesStream(Function(List<SensorDTO_Mini>) onData) {
+  /// Subscribe to devices stream (only in MQTT mode)
+  /// Returns StreamSubscription to allow caller to cancel if needed
+  StreamSubscription<List<SensorDTO_Mini>>? subscribeToDevicesStream(Function(List<SensorDTO_Mini>) onData) {
     if (_selectedMode == ConnectionMode.mqtt) {
-      _mqttService.devicesStream.listen(onData);
+      return _mqttService.devicesStream.listen(onData);
     }
+    return null;
   }
 
-  // Initialize and determine connection mode (call once on app startup)
+  /// Initialize the service by detecting available connection mode
   Future<void> initialize() async {
     if (_isInitialized) return;
 
-    // Try HTTP first
     try {
-      await _httpService.fetchUnits().timeout(
-        const Duration(seconds: 10),
-        onTimeout: () => throw Exception('HTTP timeout'),
-      );
+      await _httpService.ping().timeout(const Duration(seconds: 5));
       _selectedMode = ConnectionMode.http;
-      _isInitialized = true;
-      return;
-    } catch (httpError) {
-      // HTTP failed, try MQTT
-      try {
-        final connected = await _mqttService.connect();
-        if (connected) {
-          _selectedMode = ConnectionMode.mqtt;
-          _isInitialized = true;
-          return;
-        }
-      } catch (mqttError) {
-        // Both failed
+    } catch (_) {
+      final connected = await _mqttService.connect();
+      if (!connected) {
+        throw Exception('No available connection mode');
       }
+      _selectedMode = ConnectionMode.mqtt;
     }
 
-    // If both failed, default to MQTT and let individual calls handle errors
-    _selectedMode = ConnectionMode.mqtt;
     _isInitialized = true;
   }
 
-  // Fetch all units using selected mode
-  Future<List<SensorDTO_Mini>> fetchUnits() async {
-    if (!_isInitialized) {
-      await initialize();
+  /// Waits until service is initialized and connection mode is selected
+  Future<void> _ensureInitialized() async {
+    const maxAttempts = 100; // 5 seconds max (100 * 50ms)
+    int attempts = 0;
+    while (!_isInitialized || _selectedMode == null) {
+      if (attempts++ > maxAttempts) {
+        throw Exception('Service initialization timed out');
+      }
+      await Future.delayed(const Duration(milliseconds: 50));
     }
+  }
+
+  /// Ensures MQTT connection is active (connects if needed)
+  Future<void> _ensureMqttConnected() async {
+    if (!_mqttService.isConnected) {
+      final connected = await _mqttService.connect();
+      if (!connected) {
+        throw Exception('Could not connect to the server');
+      }
+    }
+  }
+
+  /// Fetch all units using the selected connection mode
+  Future<List<SensorDTO_Mini>> fetchUnits() async {
+    await _ensureInitialized();
 
     if (_selectedMode == ConnectionMode.http) {
       return await _httpService.fetchUnits();
     } else {
-      // Ensure MQTT is connected
-      if (!_mqttService.isConnected) {
-        final connected = await _mqttService.connect();
-        if (!connected) {
-          throw Exception('Could not connect to the server');
-        }
-      }
+      await _ensureMqttConnected();
       return await _mqttService.fetchUnits();
     }
   }
 
-  // Toggle unit using selected mode
+  /// Toggle unit on/off using the selected connection mode
   Future<SensorDTO_Mini?> toggleUnit(String sensorId, bool newState) async {
-    if (!_isInitialized) {
-      await initialize();
-    }
+    await _ensureInitialized();
 
     if (_selectedMode == ConnectionMode.http) {
       return await _httpService.toggleUnit(sensorId, newState);
     } else {
-      // Ensure MQTT is connected
-      if (!_mqttService.isConnected) {
-        final connected = await _mqttService.connect();
-        if (!connected) {
-          throw Exception('Could not connect to the server');
-        }
-      }
+      await _ensureMqttConnected();
       return await _mqttService.toggleUnit(sensorId, newState);
     }
   }
 
- // Update unit name
+  /// Update unit name
   Future<void> updateUnitName({
     required String sensorId,
     required String name,
   }) async {
-    if (!_isInitialized) {
-      await initialize();
-    }
+    await _ensureInitialized();
 
     if (_selectedMode == ConnectionMode.http) {
       await _httpService.updateUnitName(sensorId: sensorId, name: name);
     } else {
-      // Ensure MQTT is connected
-      if (!_mqttService.isConnected) {
-        final connected = await _mqttService.connect();
-        if (!connected) {
-          throw Exception('Could not connect to the server');
-        }
-      }
+      await _ensureMqttConnected();
       await _mqttService.updateUnitName(sensorId: sensorId, name: name);
     }
   }
 
-  // Enable inching mode
+  /// Enable inching mode
   Future<void> enableInchingMode({
     required String sensorId,
     required String unitId,
     required int inchingTimeInMs,
   }) async {
-    if (!_isInitialized) {
-      await initialize();
-    }
+    await _ensureInitialized();
 
     if (_selectedMode == ConnectionMode.http) {
       await _httpService.enableInchingMode(
@@ -149,13 +134,7 @@ class UnifiedSmartHomeService {
         inchingTimeInMs: inchingTimeInMs,
       );
     } else {
-      // Ensure MQTT is connected
-      if (!_mqttService.isConnected) {
-        final connected = await _mqttService.connect();
-        if (!connected) {
-          throw Exception('Could not connect to the server');
-        }
-      }
+      await _ensureMqttConnected();
       await _mqttService.enableInchingMode(
         sensorId: sensorId,
         unitId: unitId,
@@ -164,35 +143,38 @@ class UnifiedSmartHomeService {
     }
   }
 
-  // Disable inching mode
+  /// Disable inching mode
   Future<void> disableInchingMode({
     required String sensorId,
     required String unitId,
   }) async {
-    if (!_isInitialized) {
-      await initialize();
-    }
+    await _ensureInitialized();
 
     if (_selectedMode == ConnectionMode.http) {
       await _httpService.disableInchingMode(sensorId: sensorId, unitId: unitId);
     } else {
-      // Ensure MQTT is connected
-      if (!_mqttService.isConnected) {
-        final connected = await _mqttService.connect();
-        if (!connected) {
-          throw Exception('Could not connect to the server');
-        }
-      }
+      await _ensureMqttConnected();
       await _mqttService.disableInchingMode(sensorId: sensorId, unitId: unitId);
     }
   }
 
-  // Manually switch connection mode (optional)
-  void switchMode(ConnectionMode mode) {
+  /// Manually switch connection mode (disconnect/connect as needed)
+  Future<void> switchMode(ConnectionMode mode) async {
+    if (_selectedMode == mode) return;
+
+    if (_selectedMode == ConnectionMode.mqtt) {
+      _mqttService.disconnect();
+    }
+
     _selectedMode = mode;
+
+    if (mode == ConnectionMode.mqtt) {
+      final connected = await _mqttService.connect();
+      if (!connected) throw Exception('Could not connect to MQTT');
+    }
   }
 
-  // Reset and reinitialize (useful for troubleshooting)
+  /// Reset and reinitialize service (useful for troubleshooting)
   Future<void> reset() async {
     _isInitialized = false;
     _selectedMode = null;
@@ -200,7 +182,7 @@ class UnifiedSmartHomeService {
     await initialize();
   }
 
-  // Disconnect MQTT
+  /// Disconnect MQTT connection
   void disconnect() {
     _mqttService.disconnect();
   }
