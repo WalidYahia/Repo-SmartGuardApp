@@ -235,7 +235,7 @@ void _handleDevicesMessage(String payload) async {
     try {
       // Publish message
       final builder = MqttClientPayloadBuilder();
-      builder.addString(json.encode(message));
+      builder.addUTF8String(json.encode(message));
       _client!.publishMessage(
         publishTopic,
         MqttQos.atLeastOnce,
