@@ -14,18 +14,6 @@ class _ScenariosPageState extends State<ScenariosPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Scenarios'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.add),
-            onPressed: () {
-              // TODO: Add new scenario
-            },
-            tooltip: 'Add Scenario',
-          ),
-        ],
-      ),
       body: Column(
         children: [
           Expanded(

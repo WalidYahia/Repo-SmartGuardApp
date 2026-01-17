@@ -6,7 +6,6 @@ import 'package:flutter/material.dart';
 import '../services/unified_smart_home_service.dart';
 import '../models/sensor_dto_mini.dart';
 import '../widgets/unit_list_item.dart';
-import '../widgets/app_footer.dart';
 
 class SmartHomeUnitsPage extends StatefulWidget {
   const SmartHomeUnitsPage({Key? key}) : super(key: key);
@@ -31,7 +30,7 @@ class _SmartHomeUnitsPageState extends State<SmartHomeUnitsPage> {
 
   Future<void> _initialize() async {
     // Initialize and determine connection mode once
-    await _service.initialize();
+    //await _service.initialize();
     
     // Subscribe to devices stream if using MQTT
     _service.subscribeToDevicesStream((devices) {
@@ -151,41 +150,6 @@ class _SmartHomeUnitsPageState extends State<SmartHomeUnitsPage> {
 @override
   Widget build(BuildContext context) {
      return Scaffold(
-      appBar: AppBar(
-        centerTitle: false,
-        title: const Text('My Home', 
-        style: TextStyle(
-        color: Colors.black,
-        fontWeight: FontWeight.w600,
-      ),),
-        actions: [
-          // Connection status indicator
-          if (_service.selectedMode != null)
-            Padding(
-              padding: const EdgeInsets.only(right: 22),
-              child: Center(
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: _service.selectedMode == ConnectionMode.http 
-                        ? Colors.blue 
-                        : Colors.green,
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Text(
-                    
-                    _service.selectedMode == ConnectionMode.http ? 'Local' : 'Remote',
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-              ),
-            ),
-        ],
-      ),
       body: Column(
         children: [
           Expanded(child: _buildBody())//,
