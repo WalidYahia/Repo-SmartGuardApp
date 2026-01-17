@@ -1,9 +1,12 @@
 // lib/pages/smart_home_units_page.dart
 
+import 'dart:async';
+
 import 'package:flutter/material.dart';
-import '../models/sensor_dto.dart';
-import '../services/smart_home_api_service.dart';
+import '../services/unified_smart_home_service.dart';
+import '../models/sensor_dto_mini.dart';
 import '../widgets/unit_list_item.dart';
+import '../widgets/app_footer.dart';
 
 class SmartHomeUnitsPage extends StatefulWidget {
   const SmartHomeUnitsPage({Key? key}) : super(key: key);
@@ -13,16 +16,43 @@ class SmartHomeUnitsPage extends StatefulWidget {
 }
 
 class _SmartHomeUnitsPageState extends State<SmartHomeUnitsPage> {
-  final SmartHomeApiService _apiService = SmartHomeApiService();
-  List<SensorDTO> units = [];
+  final UnifiedSmartHomeService _service = UnifiedSmartHomeService();
+  List<SensorDTO_Mini> units = [];
   bool isLoading = true;
   String? errorMessage;
+  StreamSubscription<List<SensorDTO_Mini>>? _devicesSubscription;
+  String? _expandedUnitId; // Track which unit is expanded
 
   @override
   void initState() {
     super.initState();
+    _initialize();
+  }
+
+  Future<void> _initialize() async {
+    // Initialize and determine connection mode once
+    await _service.initialize();
+    
+    // Subscribe to devices stream if using MQTT
+    _service.subscribeToDevicesStream((devices) {
+      if (mounted) {
+        setState(() {
+          units = devices;
+          isLoading = false;
+          errorMessage = null;
+        });
+      }
+    });
+    
+    // Load units after initialization
     loadUnits();
   }
+  // Future<void> _initialize() async {
+  //   // Initialize and determine connection mode once
+  //   await _service.initialize();
+  //   // Load units after initialization
+  //   loadUnits();
+  // }
 
   Future<void> loadUnits() async {
     setState(() {
@@ -31,62 +61,141 @@ class _SmartHomeUnitsPageState extends State<SmartHomeUnitsPage> {
     });
 
     try {
-      final fetchedUnits = await _apiService.fetchUnits();
+      final fetchedUnits = await _service.fetchUnits();
       setState(() {
         units = fetchedUnits;
         isLoading = false;
       });
     } catch (e) {
       setState(() {
-        errorMessage = e.toString();
+        errorMessage = _parseErrorMessage(e.toString());
         isLoading = false;
       });
     }
   }
 
-  Future<void> toggleUnit(String sensorId, bool currentState) async {
-  try {
-    final updatedSensor = await _apiService.toggleUnit(sensorId, currentState);
-    
-    if (updatedSensor != null) {
-      // Update the specific unit in the list without reloading everything
-      setState(() {
-        final index = units.indexWhere((u) => u.sensorId == sensorId);
-        if (index != -1) {
-          units[index] = updatedSensor;
-        }
-      });
-    }
-  } catch (e) {
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('$e')),
-      );
+  String _parseErrorMessage(String error) {
+    if (error.contains('Could not connect to the server')) {
+      return 'Could not connect to the server';
+    } else if (error.contains('No response from the device')) {
+      return 'No response from the device';
+    } else if (error.contains('TimeoutException')) {
+      return 'No response from the device';
+    } else {
+      return error.replaceAll('Exception: ', '');
     }
   }
-}
+
+   Future<void> toggleUnit(String sensorId, bool newState) async {
+    try {
+      final updatedSensor = await _service.toggleUnit(sensorId, newState);
+      
+      if (updatedSensor != null) {
+        setState(() {
+          final index = units.indexWhere((u) => u.sensorId == sensorId);
+          if (index != -1) {
+            units[index] = updatedSensor;
+          }
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(_parseErrorMessage(e.toString())),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+      rethrow;
+    }
+  }
+
+  Future<void> updateUnit(SensorDTO_Mini updatedUnit) async {
+    // try {
+    //   // TODO: Call API/MQTT to update unit settings
+    //   // For now, just update locally
+    //   setState(() {
+    //     final index = units.indexWhere((u) => u.sensorId == updatedUnit.sensorId);
+    //     if (index != -1) {
+    //       units[index] = updatedUnit;
+    //     }
+    //   });
+      
+    //   if (mounted) {
+    //     ScaffoldMessenger.of(context).showSnackBar(
+    //       const SnackBar(
+    //         content: Text('Unit updated successfully'),
+    //         backgroundColor: Colors.green,
+    //       ),
+    //     );
+    //   }
+    // } catch (e) {
+    //   if (mounted) {
+    //     ScaffoldMessenger.of(context).showSnackBar(
+    //       SnackBar(
+    //         content: Text(_parseErrorMessage(e.toString())),
+    //         backgroundColor: Colors.red,
+    //       ),
+    //     );
+    //   }
+    // }
+  }
 
   @override
+  void dispose() {
+    _devicesSubscription?.cancel();
+    super.dispose();
+  }
+
+@override
   Widget build(BuildContext context) {
-    return Scaffold(
+     return Scaffold(
       appBar: AppBar(
-        title: const Text('My Units', 
+        centerTitle: false,
+        title: const Text('My Home', 
         style: TextStyle(
-        color: Colors.blueAccent,
+        color: Colors.black,
         fontWeight: FontWeight.w600,
       ),),
-        
         actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: loadUnits,
-            tooltip: 'Refresh',
-          ),
+          // Connection status indicator
+          if (_service.selectedMode != null)
+            Padding(
+              padding: const EdgeInsets.only(right: 22),
+              child: Center(
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: _service.selectedMode == ConnectionMode.http 
+                        ? Colors.blue 
+                        : Colors.green,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Text(
+                    
+                    _service.selectedMode == ConnectionMode.http ? 'Local' : 'Remote',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ),
+            ),
         ],
       ),
-      body: _buildBody(),
+      body: Column(
+        children: [
+          Expanded(child: _buildBody()),
+          const AppFooter(),
+        ],
+      ),
     );
   }
+
+
 
   Widget _buildBody() {
     if (isLoading) {
@@ -141,7 +250,18 @@ class _SmartHomeUnitsPageState extends State<SmartHomeUnitsPage> {
           final unit = units[index];
           return UnitListItem(
             unit: unit,
+            isExpanded: _expandedUnitId == unit.sensorId,
+            onTap: () {
+              setState(() {
+                if (_expandedUnitId == unit.sensorId) {
+                  _expandedUnitId = null; // Collapse if already expanded
+                } else {
+                  _expandedUnitId = unit.sensorId; // Expand this unit
+                }
+              });
+            },
             onToggle: (newState) => toggleUnit(unit.sensorId, unit.isOn),
+            onUpdate: updateUnit,
           );
         },
       ),
