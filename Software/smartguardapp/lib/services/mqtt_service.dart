@@ -5,6 +5,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:mqtt_client/mqtt_client.dart';
 import 'package:mqtt_client/mqtt_server_client.dart';
+import 'package:smartguardapp/models/user_scenario.dart';
 import '../models/apiResponse.dart';
 import '../models/sensor_dto_mini.dart';
 import 'package:flutter/foundation.dart'; // Add this import
@@ -15,13 +16,18 @@ List<SensorDTO_Mini> _parseDevices(String payload) {
   return jsonData.map((json) => SensorDTO_Mini.fromJson(json)).toList();
 }
 
+List<UserScenario> _parseScenarios(String payload) {
+  final List<dynamic> jsonData = json.decode(payload);
+  return jsonData.map((json) => UserScenario.fromJson(json)).toList();
+}
+
 class MqttService {
 
-  // static const String hubId = "SmartGuard-WALID";
-  // static const String clientId = 'MobileApp-Emulator';
+  static const String hubId = "SmartGuard-WALID";
+  static const String clientId = 'MobileApp-Emulator';
 
-  static const String hubId = "SmartGuard-000000002e5c0c51";
-  static const String clientId = 'MobileApp-1';
+  // static const String hubId = "SmartGuard-000000002e5c0c51";
+  // static const String clientId = 'MobileApp-1';
 
   //   static const String hubId = "SmartGuard-000000002e5c0c51";
   // static const String clientId = 'Tablet-1';
@@ -38,6 +44,7 @@ class MqttService {
   static String installedUnitsTopic = '$hubId/InstalledUnits';
   static const String publishTopic = '$hubId/RemoteAction';
   static const String remoteAckTopic = '$hubId/RemoteAction_Ack';
+  static String userScenariosTopic = '$hubId/UserScenarios';
 
   static const Duration responseTimeout = Duration(seconds: 5);
   
@@ -55,12 +62,20 @@ class MqttService {
   bool get isConnected => _isConnected;
 
   List<SensorDTO_Mini> _latestDevices = [];
+  List<UserScenario> _userScenarios = [];
+
   StreamController<List<SensorDTO_Mini>>? _devicesStreamController;
+  StreamController<List<UserScenario>>? _userScenariosStreamController;
 
   // Get devices stream
   Stream<List<SensorDTO_Mini>> get devicesStream {
     _devicesStreamController ??= StreamController<List<SensorDTO_Mini>>.broadcast();
     return _devicesStreamController!.stream;
+  }
+
+  Stream<List<UserScenario>> get userScenariosStream {
+    _userScenariosStreamController ??= StreamController<List<UserScenario>>.broadcast();
+    return _userScenariosStreamController!.stream;
   }
   
   // Get latest devices list
@@ -99,7 +114,7 @@ class MqttService {
     if (_client!.connectionStatus!.state == MqttConnectionState.connected) {
       //print('MQTT Connected successfully');
       _isConnected = true;
-      _subscribeToAckTopic();
+      //_subscribeToAckTopic();
       return true;
     } else {
       //print('MQTT Connection failed: ${_client!.connectionStatus}');
@@ -115,6 +130,7 @@ class MqttService {
 
   void _onConnected() {
     print('MQTT Connected');
+    _pendingRequests.clear();
     _isConnected = true;
     _subscribeToAckTopic();
   }
@@ -155,7 +171,9 @@ class MqttService {
     
     // Subscribe to devices topic
     _client!.subscribe(installedUnitsTopic, MqttQos.atLeastOnce);
-    
+
+    _client!.subscribe(userScenariosTopic, MqttQos.atLeastOnce);
+
     _client!.updates!.listen((List<MqttReceivedMessage<MqttMessage>> messages) {
       for (var message in messages) {
         final topic = message.topic;
@@ -167,7 +185,10 @@ class MqttService {
           _handleAckMessage(payload);
         } else if (topic == installedUnitsTopic) {
           _handleDevicesMessage(payload);
+        } else if (topic == userScenariosTopic) {
+          _handleUserScenariosMessage(payload);
         }
+        
       }
     });
   }
@@ -182,6 +203,19 @@ void _handleDevicesMessage(String payload) async {
     _devicesStreamController!.add(_latestDevices);
   } catch (e) {
     print('Error parsing devices message: $e');
+  }
+}
+
+void _handleUserScenariosMessage(String payload) async {
+  try {
+    // ✅ Parse on background thread
+    final devices = await compute(_parseScenarios, payload);
+    _userScenarios = devices;
+    
+    _userScenariosStreamController ??= StreamController<List<UserScenario>>.broadcast();
+    _userScenariosStreamController!.add(_userScenarios);
+  } catch (e) {
+    print('Error parsing scenarios message: $e');
   }
 }
 
@@ -303,6 +337,32 @@ void _handleDevicesMessage(String payload) async {
   }
 
 
+  Future<List<UserScenario>> fetchScenarios() async {
+    try {
+      // Ensure MQTT is connected
+      if (!_isConnected) {
+        final connected = await connect();
+        if (!connected) {
+          throw Exception('Could not connect to the server');
+        }
+      }
+      
+      // Wait a moment for initial data if devices list is empty
+      if (_userScenarios.isEmpty) {
+        await Future.delayed(const Duration(seconds: 2));
+      }
+      
+      // Return the latest devices list
+      if (_userScenarios.isEmpty) {
+        throw Exception('No scenarios available');
+      }
+      
+      return _userScenarios;
+    } catch (e) {
+      rethrow;
+    }
+  }
+
   // Toggle unit via MQTT
   Future<SensorDTO_Mini?> toggleUnit(String sensorId, bool newState) async {
     try {
@@ -399,5 +459,7 @@ Future<void> disableInchingMode({
     _pendingRequests.clear();
     _devicesStreamController?.close();
     _devicesStreamController = null;
+    _userScenariosStreamController?.close();
+    _userScenariosStreamController = null;
   }
 }

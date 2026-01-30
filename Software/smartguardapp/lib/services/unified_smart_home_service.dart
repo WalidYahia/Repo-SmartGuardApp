@@ -1,6 +1,8 @@
 // lib/services/unified_smart_home_service.dart
 
 import 'dart:async';
+import 'package:smartguardapp/models/user_scenario.dart';
+
 import '../models/sensor_dto_mini.dart';
 import 'smart_home_api_service.dart';
 import 'mqtt_service.dart';
@@ -40,6 +42,14 @@ class UnifiedSmartHomeService {
     return null;
   }
 
+    StreamSubscription<List<UserScenario>>? subscribeToUserScenario(Function(List<UserScenario>) onData) {
+    if (_selectedMode == ConnectionMode.mqtt) {
+      return _mqttService.userScenariosStream.listen(onData);
+    }
+    return null;
+  }
+
+
   /// Initialize the service by detecting available connection mode
   Future<void> initialize() async {
     if (_isInitialized) return;
@@ -78,6 +88,21 @@ class UnifiedSmartHomeService {
         throw Exception('Could not connect to the server');
       }
     }
+  }
+
+  /// Fetch all units using the selected connection mode
+  Future<List<UserScenario>> fetchScenarios() async {
+    await _ensureInitialized();
+
+    if (_selectedMode == ConnectionMode.http) {
+      //return await _httpService.();
+    } else {
+      //await _ensureMqttConnected();
+      //return await _mqttService.fetchScenarios();
+    }
+
+    await _ensureMqttConnected();
+    return await _mqttService.fetchScenarios();
   }
 
   /// Fetch all units using the selected connection mode

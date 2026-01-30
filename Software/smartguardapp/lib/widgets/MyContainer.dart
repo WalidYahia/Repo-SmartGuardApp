@@ -25,7 +25,7 @@ class _MasterPageState extends State<MasterPage> {
     super.initState();
     _pages = [
       SmartHomeUnitsPage(connectionService: _service),
-      const ScenariosPage(),
+      ScenariosPage(connectionService: _service),
       const UsersPage(),
     ];
     _initialize();
@@ -113,6 +113,7 @@ class _MasterPageState extends State<MasterPage> {
                       _isInitializing = true;
                       _initError = null;
                     });
+                    _service.reset();
                     _initialize();
                   },
                   icon: const Icon(Icons.refresh),
