@@ -117,17 +117,27 @@ class UnifiedSmartHomeService {
     }
   }
 
-  /// Add new scenario
-Future<void> saveScenario(UserScenario scenario) async {
+/// Save (add or update) scenario and return saved scenario if available
+Future<UserScenario?> saveScenario(UserScenario scenario) async {
   await _ensureInitialized();
 
   if (_selectedMode == ConnectionMode.http) {
     // await _httpService.addScenario(scenario);
-    throw Exception('HTTP add scenario not implemented');
+    throw Exception('HTTP add/update scenario not implemented');
   } else {
     await _ensureMqttConnected();
-    await _mqttService.saveScenario(scenario);
+    return await _mqttService.saveScenario(scenario);
   }
+}
+
+/// Add scenario (wrapper)
+Future<UserScenario?> addScenario(UserScenario scenario) async {
+  return await saveScenario(scenario);
+}
+
+/// Update scenario (wrapper)
+Future<UserScenario?> updateScenario(UserScenario scenario) async {
+  return await saveScenario(scenario);
 }
 
 /// Delete scenario

@@ -364,15 +364,42 @@ void _handleUserScenariosMessage(String payload) async {
   }
 
 
-/// Add new scenario via MQTT
-Future<void> saveScenario(UserScenario scenario) async {
+/// Add or update scenario via MQTT. Returns the created/updated scenario when available.
+Future<UserScenario?> saveScenario(UserScenario scenario) async {
   try {
+    // The backend expects a JsonCommandPayload with a UserScenario property
     final response = await publishCommand(
       jsonCommandType: 10,
-      commandPayload: scenario.toJson(),
+      commandPayload: {
+        'UserScenario': scenario.toJson(),
+      },
     );
 
-    if (!response.isSuccess) {
+    if (response.isSuccess) {
+      final payload = response.devicePayload;
+      if (payload != null) {
+        // payload may be the scenario directly or wrapped inside { 'UserScenario': {...} }
+        if (payload is Map<String, dynamic>) {
+          if (payload.containsKey('UserScenario') && payload['UserScenario'] is Map<String, dynamic>) {
+            return UserScenario.fromJson(payload['UserScenario'] as Map<String, dynamic>);
+          }
+          return UserScenario.fromJson(payload);
+        }
+        // if payload is nested differently, try to decode if it's a JSON string
+        if (payload is String) {
+          try {
+            final Map<String, dynamic> jsonData = json.decode(payload) as Map<String, dynamic>;
+            if (jsonData.containsKey('UserScenario') && jsonData['UserScenario'] is Map<String, dynamic>) {
+              return UserScenario.fromJson(jsonData['UserScenario'] as Map<String, dynamic>);
+            }
+            return UserScenario.fromJson(jsonData);
+          } catch (_) {
+            // ignore parse errors
+          }
+        }
+      }
+      return null;
+    } else {
       throw Exception(response.errorMessage);
     }
   } catch (e) {

@@ -33,6 +33,7 @@ class _AddScenarioDialogState extends State<AddScenarioDialog> {
   
   bool _isLoading = true;
   bool _isSaving = false;
+  bool _saveSuccess = false;
   String? _targetSensorError;
   Map<int, String> _conditionErrors = {};
   /// Keys: "${conditionIndex}_${sensorIndex}_sensor" | "${conditionIndex}_${sensorIndex}_value"
@@ -138,7 +139,10 @@ class _AddScenarioDialogState extends State<AddScenarioDialog> {
       return;
     }
 
-    setState(() => _isSaving = true);
+    setState(() {
+      _isSaving = true;
+      _saveSuccess = false;
+    });
 
     final conditions = _conditions.map((cb) => cb.build()).where((c) => c != null).cast<UserScenarioCondition>().toList();
 
@@ -153,7 +157,45 @@ class _AddScenarioDialogState extends State<AddScenarioDialog> {
       conditions: conditions,
     );
 
-    Navigator.of(context).pop(scenario);
+    try {
+      UserScenario? saved;
+      if (widget.scenario == null) {
+        saved = await widget.service.addScenario(scenario);
+      } else {
+        saved = await widget.service.updateScenario(scenario);
+      }
+
+      if (!mounted) return;
+
+      setState(() {
+        _isSaving = false;
+        _saveSuccess = true;
+      });
+
+      // Show check and close after a short delay
+      Future.delayed(const Duration(milliseconds: 900), () {
+        if (!mounted) return;
+        Navigator.of(context).pop(saved ?? scenario);
+      });
+    } catch (e) {
+      if (!mounted) return;
+
+      setState(() => _isSaving = false);
+
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Error'),
+          content: Text('Failed to save scenario: $e'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('OK'),
+            ),
+          ],
+        ),
+      );
+    }
   }
 
   @override
@@ -283,11 +325,21 @@ class _AddScenarioDialogState extends State<AddScenarioDialog> {
           onPressed: () => Navigator.pop(context),
           child: const Text('Cancel'),
         ),
-        ElevatedButton(
-          onPressed: _isSaving ? null : _save,
-          child: _isSaving
-              ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
-              : const Text('Save'),
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (_saveSuccess)
+              const Padding(
+                padding: EdgeInsets.only(right: 8.0),
+                child: Icon(Icons.check_circle, color: Colors.green, size: 20),
+              ),
+            ElevatedButton(
+              onPressed: _isSaving ? null : _save,
+              child: _isSaving
+                  ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
+                  : const Text('Save'),
+            ),
+          ],
         ),
       ],
     );

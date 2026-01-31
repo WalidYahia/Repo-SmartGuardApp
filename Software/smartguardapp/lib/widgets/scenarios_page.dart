@@ -91,7 +91,7 @@ class _ScenariosPageState extends State<ScenariosPage> {
     );
 
     if (result != null) {
-      await _service.updateScenario(result);
+      // The dialog saves the scenario itself, we only need to show feedback here
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -112,7 +112,7 @@ class _ScenariosPageState extends State<ScenariosPage> {
     );
 
     if (result != null) {
-      await _service.addScenario(result);
+      // The dialog saves the scenario itself, we only need to show feedback here
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
