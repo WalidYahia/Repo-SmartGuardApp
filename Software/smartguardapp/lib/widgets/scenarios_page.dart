@@ -1,17 +1,16 @@
 // lib/pages/scenarios_page.dart
 
 import 'dart:async';
-
 import 'package:flutter/material.dart';
 import '../models/user_scenario.dart';
 import '../dialogs/edit_scenario_dialog.dart';
+import '../dialogs/add_scenario_dialog.dart';
 import '../services/unified_smart_home_service.dart';
 
 class ScenariosPage extends StatefulWidget {
-    final UnifiedSmartHomeService connectionService;
+  final UnifiedSmartHomeService connectionService;
 
- const ScenariosPage({Key? key, required this.connectionService}) : super(key: key);
-
+  const ScenariosPage({Key? key, required this.connectionService}) : super(key: key);
 
   @override
   State<ScenariosPage> createState() => _ScenariosPageState();
@@ -21,7 +20,7 @@ class _ScenariosPageState extends State<ScenariosPage> {
   late final UnifiedSmartHomeService _service;
   List<UserScenario> userScenarios = [];
   bool isLoading = true;
-  StreamSubscription<List<UserScenario>>? _devicesSubscription;
+  StreamSubscription<List<UserScenario>>? _scenariosSubscription;
   String? errorMessage;
 
   @override
@@ -31,10 +30,8 @@ class _ScenariosPageState extends State<ScenariosPage> {
     _initialize();
   }
 
-
   Future<void> _initialize() async {
-    // Subscribe to devices stream if using MQTT
-    _devicesSubscription = _service.subscribeToUserScenario((scenarios) {
+    _scenariosSubscription = _service.subscribeToUserScenario((scenarios) {
       if (mounted) {
         setState(() {
           userScenarios = scenarios;
@@ -47,7 +44,6 @@ class _ScenariosPageState extends State<ScenariosPage> {
     loadScenarios();
   }
 
-
   Future<void> loadScenarios() async {
     setState(() {
       isLoading = true;
@@ -55,20 +51,24 @@ class _ScenariosPageState extends State<ScenariosPage> {
     });
 
     try {
-      final fetchedUnits = await _service.fetchScenarios();
-      setState(() {
-        userScenarios = fetchedUnits;
-        isLoading = false;
-      });
+      final fetchedScenarios = await _service.fetchScenarios();
+      if (mounted) {
+        setState(() {
+          userScenarios = fetchedScenarios;
+          isLoading = false;
+        });
+      }
     } catch (e) {
-      setState(() {
-        errorMessage = _parseErrorMessage(e.toString());
-        isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          errorMessage = _parseErrorMessage(e.toString());
+          isLoading = false;
+        });
+      }
     }
   }
 
-    String _parseErrorMessage(String error) {
+  String _parseErrorMessage(String error) {
     if (error.contains('Could not connect to the server')) {
       return 'Could not connect to the server';
     } else if (error.contains('No response from the device')) {
@@ -84,20 +84,14 @@ class _ScenariosPageState extends State<ScenariosPage> {
     final result = await showDialog<UserScenario>(
       context: context,
       barrierDismissible: false,
-      builder: (context) => EditScenarioDialog(scenario: scenario),
+      builder: (context) => EditScenarioDialog(
+        scenario: scenario,
+        service: _service,
+      ),
     );
 
     if (result != null) {
-      // TODO: Save scenario via API
-      // await _apiService.updateScenario(result);
-      
-      setState(() {
-        final index = userScenarios.indexWhere((s) => s.id == result.id);
-        if (index != -1) {
-          userScenarios[index] = result;
-        }
-      });
-
+      await _service.updateScenario(result);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -110,6 +104,81 @@ class _ScenariosPageState extends State<ScenariosPage> {
     }
   }
 
+  void _showAddDialog() async {
+    final result = await showDialog<UserScenario>(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AddScenarioDialog(service: _service),
+    );
+
+    if (result != null) {
+      await _service.addScenario(result);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Scenario created successfully'),
+            backgroundColor: Colors.green,
+            duration: Duration(seconds: 2),
+          ),
+        );
+      }
+    }
+  }
+
+  void _confirmDelete(UserScenario scenario) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete Scenario'),
+        content: Text('Are you sure you want to delete "${scenario.name}"?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      try {
+        await _service.deleteScenario(scenario.id);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Scenario deleted successfully'),
+              backgroundColor: Colors.green,
+              duration: Duration(seconds: 2),
+            ),
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Failed to delete: ${_parseErrorMessage(e.toString())}'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    _scenariosSubscription?.cancel();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -120,14 +189,17 @@ class _ScenariosPageState extends State<ScenariosPage> {
           ),
         ],
       ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: _showAddDialog,
+        backgroundColor: Colors.blueAccent,
+        child: const Icon(Icons.add, color: Colors.white),
+      ),
     );
   }
 
   Widget _buildBody() {
     if (isLoading) {
-      return const Center(
-        child: CircularProgressIndicator(),
-      );
+      return const Center(child: CircularProgressIndicator());
     }
 
     if (errorMessage != null) {
@@ -137,11 +209,7 @@ class _ScenariosPageState extends State<ScenariosPage> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Icon(
-                Icons.error_outline,
-                size: 64,
-                color: Colors.red,
-              ),
+              const Icon(Icons.error_outline, size: 64, color: Colors.red),
               const SizedBox(height: 16),
               Text(
                 'Error Loading Scenarios',
@@ -155,10 +223,7 @@ class _ScenariosPageState extends State<ScenariosPage> {
               Text(
                 errorMessage!,
                 textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 14,
-                  color: Colors.grey[600],
-                ),
+                style: TextStyle(fontSize: 14, color: Colors.grey[600]),
               ),
               const SizedBox(height: 24),
               ElevatedButton.icon(
@@ -177,11 +242,7 @@ class _ScenariosPageState extends State<ScenariosPage> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
-              Icons.auto_awesome,
-              size: 64,
-              color: Colors.grey[400],
-            ),
+            Icon(Icons.auto_awesome, size: 64, color: Colors.grey[400]),
             const SizedBox(height: 16),
             Text(
               'No Scenarios Yet',
@@ -194,10 +255,7 @@ class _ScenariosPageState extends State<ScenariosPage> {
             const SizedBox(height: 8),
             Text(
               'Create your first automation scenario',
-              style: TextStyle(
-                fontSize: 14,
-                color: Colors.grey[500],
-              ),
+              style: TextStyle(fontSize: 14, color: Colors.grey[500]),
             ),
           ],
         ),
@@ -240,11 +298,22 @@ class _ScenariosPageState extends State<ScenariosPage> {
                   ),
                 ),
               ),
-              trailing: IconButton(
-                icon: const Icon(Icons.edit, size: 20),
-                onPressed: () => _showEditDialog(scenario),
-                tooltip: 'Edit',
-                color: Colors.blueAccent,
+              trailing: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  IconButton(
+                    icon: const Icon(Icons.edit, size: 20),
+                    onPressed: () => _showEditDialog(scenario),
+                    tooltip: 'Edit',
+                    color: Colors.blueAccent,
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.delete, size: 20),
+                    onPressed: () => _confirmDelete(scenario),
+                    tooltip: 'Delete',
+                    color: Colors.red,
+                  ),
+                ],
               ),
             ),
           );

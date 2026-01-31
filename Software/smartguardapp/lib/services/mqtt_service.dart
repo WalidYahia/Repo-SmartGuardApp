@@ -363,6 +363,39 @@ void _handleUserScenariosMessage(String payload) async {
     }
   }
 
+
+/// Add new scenario via MQTT
+Future<void> saveScenario(UserScenario scenario) async {
+  try {
+    final response = await publishCommand(
+      jsonCommandType: 10,
+      commandPayload: scenario.toJson(),
+    );
+
+    if (!response.isSuccess) {
+      throw Exception(response.errorMessage);
+    }
+  } catch (e) {
+    rethrow;
+  }
+}
+
+/// Delete scenario via MQTT
+Future<void> deleteScenario(String scenarioId) async {
+  try {
+    final response = await publishCommand(
+      jsonCommandType: 11,
+      commandPayload: {'scenarioId': scenarioId},
+    );
+
+    if (!response.isSuccess) {
+      throw Exception(response.errorMessage);
+    }
+  } catch (e) {
+    rethrow;
+  }
+}
+
   // Toggle unit via MQTT
   Future<SensorDTO_Mini?> toggleUnit(String sensorId, bool newState) async {
     try {

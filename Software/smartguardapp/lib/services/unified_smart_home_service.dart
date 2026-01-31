@@ -117,6 +117,32 @@ class UnifiedSmartHomeService {
     }
   }
 
+  /// Add new scenario
+Future<void> saveScenario(UserScenario scenario) async {
+  await _ensureInitialized();
+
+  if (_selectedMode == ConnectionMode.http) {
+    // await _httpService.addScenario(scenario);
+    throw Exception('HTTP add scenario not implemented');
+  } else {
+    await _ensureMqttConnected();
+    await _mqttService.saveScenario(scenario);
+  }
+}
+
+/// Delete scenario
+Future<void> deleteScenario(String scenarioId) async {
+  await _ensureInitialized();
+
+  if (_selectedMode == ConnectionMode.http) {
+    // await _httpService.deleteScenario(scenarioId);
+    throw Exception('HTTP delete scenario not implemented');
+  } else {
+    await _ensureMqttConnected();
+    await _mqttService.deleteScenario(scenarioId);
+  }
+}
+
   /// Toggle unit on/off using the selected connection mode
   Future<SensorDTO_Mini?> toggleUnit(String sensorId, bool newState) async {
     await _ensureInitialized();
