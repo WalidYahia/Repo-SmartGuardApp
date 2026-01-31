@@ -345,7 +345,8 @@ class _AddScenarioDialogState extends State<AddScenarioDialog> {
                   onPressed: () => setState(() => _conditions.add(_ConditionBuilder())),
                   icon: const Icon(Icons.add),
                   label: const Text('Add Condition'),
-                ),
+                  style: TextButton.styleFrom(foregroundColor: _kBorderColor),
+                 ),
               ],
             ),
           ),
@@ -366,10 +367,16 @@ class _AddScenarioDialogState extends State<AddScenarioDialog> {
               ),
             ElevatedButton(
               onPressed: _isSaving ? null : _save,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.blueAccent,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                minimumSize: const Size(0, 32),
+              ),
               child: _isSaving
-                  ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
+                  ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
                   : const Text('Save'),
-            ),
+             ),
           ],
         ),
       ],

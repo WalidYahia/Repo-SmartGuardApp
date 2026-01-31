@@ -15,6 +15,36 @@ class EditUnitDialog extends StatefulWidget {
 }
 
 class _EditUnitDialogState extends State<EditUnitDialog> {
+  /// Border color matching the Switch/toggle (blueAccent).
+  static const _kBorderColor = Colors.blueAccent;
+
+  InputDecoration _decoration({
+    String? labelText,
+    String? hintText,
+    String? errorText,
+    Widget? prefixIcon,
+    EdgeInsets? contentPadding,
+  }) =>
+      InputDecoration(
+        labelText: labelText,
+        hintText: hintText,
+        errorText: errorText,
+        prefixIcon: prefixIcon,
+        contentPadding: contentPadding ?? const EdgeInsets.symmetric(vertical: 8, horizontal: 10),
+        border: OutlineInputBorder(borderSide: BorderSide(color: _kBorderColor)),
+        enabledBorder: OutlineInputBorder(borderSide: BorderSide(color: _kBorderColor)),
+        focusedBorder: OutlineInputBorder(
+          borderSide: BorderSide(color: _kBorderColor, width: 2),
+        ),
+        errorBorder: const OutlineInputBorder(
+          borderSide: BorderSide(color: Colors.red),
+        ),
+        focusedErrorBorder: const OutlineInputBorder(
+          borderSide: BorderSide(color: Colors.red, width: 2),
+        ),
+        isDense: true,
+      );
+
   late TextEditingController _nameController;
   late TextEditingController _durationController;
   late bool _isInInchingMode;
@@ -36,7 +66,6 @@ void initState() {
   super.initState();
   _nameController = TextEditingController(text: widget.unit.name);
   _isInInchingMode = widget.unit.isInInchingMode;
-
   // Initialize _durationSeconds as an integer (seconds)
   _inchingDurationSec = (widget.unit.inchingModeWidthInMs / 1000).round();
 }
@@ -200,13 +229,8 @@ void dispose() {
                       TextFormField(
                         controller: _nameController,
                         style: const TextStyle(fontSize: 14),
-                        decoration: const InputDecoration(
-                          labelStyle: TextStyle(fontSize: 13),
-                          border: OutlineInputBorder(),
-                          prefixIcon: Icon(Icons.label, size: 18),
-                          contentPadding: EdgeInsets.symmetric(vertical: 8, horizontal: 10),
-                          isDense: true,
-                        ),
+                        decoration: _decoration(labelText: 'Device Name')
+                            .copyWith(prefixIcon: const Icon(Icons.label, size: 18), labelStyle: const TextStyle(fontSize: 13)),
                         validator: (value) {
                           if (value == null || value.trim().isEmpty) {
                             return 'Name is required';
@@ -281,7 +305,7 @@ void dispose() {
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              border: Border.all(color: Colors.grey),
+              border: Border.all(color: _kBorderColor),
               borderRadius: BorderRadius.circular(8),
             ),
             child: Row(
@@ -335,7 +359,7 @@ void dispose() {
                         padding: const EdgeInsets.symmetric(
                             vertical: 6, horizontal: 8),
                         decoration: BoxDecoration(
-                          border: Border.all(color: Colors.grey),
+                          border: Border.all(color: _kBorderColor),
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: Row(
