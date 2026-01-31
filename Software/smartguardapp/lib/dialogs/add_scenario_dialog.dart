@@ -2,6 +2,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:uuid/uuid.dart';
 import '../models/user_scenario.dart';
 import '../models/sensor_dto_mini.dart';
 import '../services/unified_smart_home_service.dart';
@@ -35,9 +36,9 @@ class _AddScenarioDialogState extends State<AddScenarioDialog> {
   bool _isSaving = false;
   bool _saveSuccess = false;
   String? _targetSensorError;
-  Map<int, String> _conditionErrors = {};
+  Map<int, String> _conditionErrors = {}; 
   /// Keys: "${conditionIndex}_${sensorIndex}_sensor" | "${conditionIndex}_${sensorIndex}_value"
-  Map<String, String> _sensorDepErrors = {};
+  Map<String, String> _sensorDepErrors = {}; 
 
   InputDecoration _decoration({
     String? labelText,
@@ -84,11 +85,26 @@ class _AddScenarioDialogState extends State<AddScenarioDialog> {
           _conditions = s.conditions.isEmpty
               ? [_ConditionBuilder()]
               : s.conditions.map((c) => _ConditionBuilder.from(c)).toList();
+
+          // If editing and action is "On", convert any Duration conditions (Duration isn't allowed for "On")
+          if (_action == SwitchOutletStatus.on) {
+            for (final cb in _conditions) {
+              if (cb.type == ScenarioCondition.duration) {
+                cb.type = ScenarioCondition.onOtherSensorValue;
+              }
+            }
+          }
         }
       });
     } catch (e) {
       setState(() => _isLoading = false);
     }
+  }
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    super.dispose();
   }
 
   void _save() async {
@@ -108,6 +124,10 @@ class _AddScenarioDialogState extends State<AddScenarioDialog> {
 
     for (var i = 0; i < _conditions.length; i++) {
       final cb = _conditions[i];
+      if (cb.type == null) {
+        _conditionErrors[i] = 'Select a condition type';
+        continue;
+      }
       if (cb.type == ScenarioCondition.duration) {
         if (cb.duration == null || cb.duration! <= 0) {
           _conditionErrors[i] = 'Enter duration (e.g. 1 second)';
@@ -146,7 +166,7 @@ class _AddScenarioDialogState extends State<AddScenarioDialog> {
 
     final conditions = _conditions.map((cb) => cb.build()).where((c) => c != null).cast<UserScenarioCondition>().toList();
 
-    final scenarioId = widget.scenario?.id ?? DateTime.now().millisecondsSinceEpoch.toString();
+    final scenarioId = widget.scenario?.id ?? Uuid().v4();
     final scenario = UserScenario(
       id: scenarioId,
       name: _nameController.text.trim(),
@@ -234,7 +254,8 @@ class _AddScenarioDialogState extends State<AddScenarioDialog> {
             key: _formKey,
             child: Column(
               mainAxisSize: MainAxisSize.min,
-              children: [
+              children: [ 
+                const SizedBox(height: 8),
                 TextFormField(
                   controller: _nameController,
                   decoration: _decoration(labelText: 'Name'),
@@ -285,7 +306,17 @@ class _AddScenarioDialogState extends State<AddScenarioDialog> {
                             ),
                           ))
                       .toList(),
-                  onChanged: (v) => setState(() => _action = v!),
+                  onChanged: (v) => setState(() {
+                    _action = v!;
+                    // When action is "On", Duration should not be available — clear those selections (set to no selection)
+                    if (_action == SwitchOutletStatus.on) {
+                      for (final cb in _conditions) {
+                        if (cb.type == ScenarioCondition.duration) {
+                          cb.type = null;
+                        }
+                      }
+                    }
+                  }),
                 ),
                 const SizedBox(height: 12),
                 
@@ -372,16 +403,21 @@ class _AddScenarioDialogState extends State<AddScenarioDialog> {
               ],
             ),
             const SizedBox(height: 8),
-            DropdownButtonFormField<ScenarioCondition>(
+            DropdownButtonFormField<ScenarioCondition?>(
               value: cb.type,
-              decoration: _decoration(labelText: 'Condition type'),
+              decoration: _decoration(
+                labelText: 'Condition type',
+                errorText: _conditionErrors[index],
+              ),
+              hint: const Text('Select type'),
               items: ScenarioCondition.values
+                  .where((t) => !(_action == SwitchOutletStatus.on && t == ScenarioCondition.duration))
                   .map((t) => DropdownMenuItem(
                         value: t,
                         child: Text(_conditionName(t)),
                       ))
                   .toList(),
-              onChanged: (v) => setState(() => cb.type = v!),
+              onChanged: (v) => setState(() => cb.type = v),
             ),
             const SizedBox(height: 8),
             if (cb.type == ScenarioCondition.duration) ...[
@@ -571,7 +607,8 @@ class _AddScenarioDialogState extends State<AddScenarioDialog> {
 }
 
 class _ConditionBuilder {
-  ScenarioCondition type = ScenarioCondition.duration;
+  // null = not selected
+  ScenarioCondition? type;
   int? duration;
   String? time;
   List<_SensorBuilder> sensors = [_SensorBuilder()];
@@ -589,12 +626,13 @@ class _ConditionBuilder {
   }
 
   UserScenarioCondition? build() {
+    if (type == null) return null;
     if (type == ScenarioCondition.duration && (duration == null || duration! <= 0)) return null;
     if (type == ScenarioCondition.onTime && (time == null || time!.isEmpty)) return null;
     if (type == ScenarioCondition.onOtherSensorValue && sensors.where((s) => s.sensorId != null).isEmpty) return null;
 
     return UserScenarioCondition(
-      condition: type,
+      condition: type!,
       durationInSeconds: duration ?? 0,
       time: time ?? '00:00:00',
       sensorsDependency: type == ScenarioCondition.onOtherSensorValue

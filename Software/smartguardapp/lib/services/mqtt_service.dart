@@ -412,12 +412,21 @@ Future<void> deleteScenario(String scenarioId) async {
   try {
     final response = await publishCommand(
       jsonCommandType: 11,
-      commandPayload: {'scenarioId': scenarioId},
-    );
+      commandPayload: {
+          // backend expects lowercase 'id' in the payload
+          'UserScenario': {'id': scenarioId}
+      },
+      );
 
-    if (!response.isSuccess) {
-      throw Exception(response.errorMessage);
-    }
+      if (response.isSuccess) {
+        // update local cache and notify listeners immediately
+        _userScenarios.removeWhere((s) => s.id == scenarioId);
+        _userScenariosStreamController ??= StreamController<List<UserScenario>>.broadcast();
+        _userScenariosStreamController!.add(_userScenarios);
+        return;
+      } else {
+        throw Exception(response.errorMessage);
+      }
   } catch (e) {
     rethrow;
   }
