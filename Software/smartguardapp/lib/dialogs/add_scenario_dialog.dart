@@ -12,7 +12,7 @@ class AddScenarioDialog extends StatefulWidget {
   /// When non-null, dialog is in edit mode: title shows scenario name, form is pre-filled, save returns updated scenario with same id.
   final UserScenario? scenario;
 
-  const AddScenarioDialog({Key? key, required this.service, this.scenario}) : super(key: key);
+  const AddScenarioDialog({super.key, required this.service, this.scenario});
 
   @override
   State<AddScenarioDialog> createState() => _AddScenarioDialogState();
@@ -243,7 +243,7 @@ class _AddScenarioDialogState extends State<AddScenarioDialog> {
           Switch(
             value: _isEnabled,
             onChanged: (v) => setState(() => _isEnabled = v),
-            activeColor: Colors.blueAccent,
+            activeThumbColor: Colors.blueAccent,
           ),
         ],
       ),
@@ -264,7 +264,7 @@ class _AddScenarioDialogState extends State<AddScenarioDialog> {
                 const SizedBox(height: 12),
                 
                 DropdownButtonFormField<String>(
-                  value: _selectedTargetSensor,
+                  initialValue: _selectedTargetSensor,
                   decoration: _decoration(
                     labelText: 'Target Sensor',
                     errorText: _targetSensorError,
@@ -295,7 +295,7 @@ class _AddScenarioDialogState extends State<AddScenarioDialog> {
                 
                 // Action (On/Off)
                 DropdownButtonFormField<SwitchOutletStatus>(
-                  value: _action,
+                  initialValue: _action,
                   decoration: _decoration(labelText: 'Action'),
                   items: SwitchOutletStatus.values
                       .map((a) => DropdownMenuItem(
@@ -321,7 +321,7 @@ class _AddScenarioDialogState extends State<AddScenarioDialog> {
                 const SizedBox(height: 12),
                 
                 DropdownButtonFormField<ScenarioLogic>(
-                  value: _logic,
+                  initialValue: _logic,
                   decoration: _decoration(labelText: 'Conditions Logic'),
                   items: ScenarioLogic.values.map((l) => DropdownMenuItem(
                     value: l,
@@ -339,7 +339,7 @@ class _AddScenarioDialogState extends State<AddScenarioDialog> {
                   final idx = entry.key;
                   final cb = entry.value;
                   return _buildCondition(idx, cb);
-                }).toList(),
+                }),
                 
                 TextButton.icon(
                   onPressed: () => setState(() => _conditions.add(_ConditionBuilder())),
@@ -411,7 +411,7 @@ class _AddScenarioDialogState extends State<AddScenarioDialog> {
             ),
             const SizedBox(height: 8),
             DropdownButtonFormField<ScenarioCondition?>(
-              value: cb.type,
+              initialValue: cb.type,
               decoration: _decoration(
                 labelText: 'Condition type',
                 errorText: _conditionErrors[index],
@@ -485,7 +485,7 @@ class _AddScenarioDialogState extends State<AddScenarioDialog> {
                       children: [
                         // Line 1: sensor dropdown (full width)
                         DropdownButtonFormField<String>(
-                          value: sb.sensorId,
+                          initialValue: sb.sensorId,
                           decoration: _decoration(
                             labelText: 'Sensor',
                             errorText: _sensorDepErrors['${index}_${sidx}_sensor'],
@@ -524,7 +524,7 @@ class _AddScenarioDialogState extends State<AddScenarioDialog> {
                             SizedBox(
                               width: 73,
                               child: DropdownButtonFormField<ScenarioOperator>(
-                                value: sb.operator,
+                                initialValue: sb.operator,
                                 decoration: _decoration(),
                                 items: ScenarioOperator.values
                                     .map((o) => DropdownMenuItem(
@@ -539,7 +539,7 @@ class _AddScenarioDialogState extends State<AddScenarioDialog> {
                             Expanded(
                               child: _isSwitchType(sb.sensorType)
                                   ? DropdownButtonFormField<String>(
-                                      value: sb.value == '0' ? '0' : '1',
+                                      initialValue: sb.value == '0' ? '0' : '1',
                                       decoration: _decoration(labelText: 'Value', errorText: _sensorDepErrors['${index}_${sidx}_value']),
                                       items: const [
                                         DropdownMenuItem(value: '1', child: Text('On')),
@@ -577,7 +577,7 @@ class _AddScenarioDialogState extends State<AddScenarioDialog> {
                     ),
                   ),
                 );
-              }).toList(),
+              }),
               TextButton.icon(
                 onPressed: () => setState(() => cb.sensors.add(_SensorBuilder())),
                 icon: const Icon(Icons.add, size: 16),

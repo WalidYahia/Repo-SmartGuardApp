@@ -8,7 +8,7 @@ import '../services/unified_smart_home_service.dart';
 class EditUnitDialog extends StatefulWidget {
   final SensorDTO_Mini unit;
 
-  const EditUnitDialog({Key? key, required this.unit}) : super(key: key);
+  const EditUnitDialog({super.key, required this.unit});
 
   @override
   State<EditUnitDialog> createState() => _EditUnitDialogState();

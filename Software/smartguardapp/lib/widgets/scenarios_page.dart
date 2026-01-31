@@ -10,7 +10,7 @@ import '../services/unified_smart_home_service.dart';
 class ScenariosPage extends StatefulWidget {
   final UnifiedSmartHomeService connectionService;
 
-  const ScenariosPage({Key? key, required this.connectionService}) : super(key: key);
+  const ScenariosPage({super.key, required this.connectionService});
 
   @override
   State<ScenariosPage> createState() => _ScenariosPageState();
@@ -273,11 +273,11 @@ class _ScenariosPageState extends State<ScenariosPage> {
             margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
             elevation: 2,
             child: ListTile(
-              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               leading: Icon(
                 Icons.auto_awesome,
                 color: scenario.isEnabled ? Colors.green : Colors.grey,
-                size: 32,
+                size: 20,
               ),
               title: Text(
                 scenario.name,
