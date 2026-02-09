@@ -239,7 +239,7 @@ void _handleUserScenariosMessage(String payload) async {
 
   // Generate unique request ID
   String _generateRequestId() {
-    return '${DateTime.now().millisecondsSinceEpoch}_${clientId}';
+    return '${DateTime.now().millisecondsSinceEpoch}_$clientId';
   }
 
   // Publish command and wait for response

@@ -1,5 +1,6 @@
 // lib/services/smart_home_api_service.dart
 
+import 'dart:io';
 import 'dart:async';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
@@ -8,8 +9,12 @@ import '../models/apiResponse.dart';
 
 class SmartHomeApiService {
 
-  static const String baseUrl = 'http://smartGuard-000000002e5c0c51:5000/api';
+  static const String _ipAddress_pi = '192.168.1.15';
+  static const String _ipAddress = '192.168.1.2';
+  static const int _port = 5000;
   
+  static const String baseUrl = 'http://$_ipAddress_pi:$_port/api';
+
   static const String? authToken = null;
 
   // Get headers with authentication if needed
@@ -52,12 +57,19 @@ Future<List<SensorDTO_Mini>> fetchUnits() async {
 }
 
 Future<void> ping() async {
-  final response = await http
-      .get(Uri.parse('$baseUrl/ping'))
-      .timeout(const Duration(seconds: 5));
+  try {
+    final response = await http.post(
+      Uri.parse('$baseUrl/Devices/handleUserCommand'),
+      headers: _getHeaders(),
+      body: json.encode({'JsonCommandType': -1}),
+    ).timeout(const Duration(seconds: 5));
 
-  if (response.statusCode != 200) {
-    throw Exception('HTTP ping failed');
+    if (response.statusCode != 200) {
+      throw Exception('HTTP ping failed: ${response.statusCode}');
+    }
+  } catch (e) {
+    //print(e);
+    throw Exception('Ping failed: $e');
   }
 }
 
@@ -100,6 +112,7 @@ Future<SensorDTO_Mini?> toggleUnit(String sensorId, bool currentState) async {
         }
         else 
         {
+          print('Unexpected response: ${response.statusCode} - ${response.body}');
           throw Exception("Server Error : $response");
         }
       }

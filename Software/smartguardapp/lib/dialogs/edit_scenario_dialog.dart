@@ -12,10 +12,10 @@ class EditScenarioDialog extends StatelessWidget {
   final UnifiedSmartHomeService service;
 
   const EditScenarioDialog({
-    Key? key,
+    super.key,
     required this.scenario,
     required this.service,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

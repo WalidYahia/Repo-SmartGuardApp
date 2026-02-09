@@ -7,7 +7,7 @@ import '../widgets/unit_list_item.dart';
 class SmartHomeUnitsPage extends StatefulWidget {
   final UnifiedSmartHomeService connectionService;
 
-  const SmartHomeUnitsPage({Key? key, required this.connectionService}) : super(key: key);
+  const SmartHomeUnitsPage({super.key, required this.connectionService});
 
   @override
   State<SmartHomeUnitsPage> createState() => _SmartHomeUnitsPageState();

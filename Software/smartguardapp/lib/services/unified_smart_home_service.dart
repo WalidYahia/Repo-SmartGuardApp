@@ -18,6 +18,8 @@ class UnifiedSmartHomeService {
 
   ConnectionMode? _selectedMode;
   bool _isInitialized = false;
+  Timer? _healthCheckTimer;
+  static const Duration _healthCheckInterval = Duration(seconds: 10);
 
   // Singleton pattern
   static final UnifiedSmartHomeService _instance = UnifiedSmartHomeService._internal();
@@ -66,6 +68,64 @@ class UnifiedSmartHomeService {
     }
 
     _isInitialized = true;
+    _startHealthCheck();
+  }
+
+  /// Start periodic health check to detect connection failures and auto-switch
+  void _startHealthCheck() {
+    _healthCheckTimer?.cancel();
+    _healthCheckTimer = Timer.periodic(_healthCheckInterval, (_) async {
+      await _performHealthCheck();
+    });
+  }
+
+  /// Check current connection and auto-switch if needed
+  Future<void> _performHealthCheck() async {
+    if (!_isInitialized || _selectedMode == null) return;
+
+    try {
+      if (_selectedMode == ConnectionMode.http) {
+        // Test HTTP connection
+        await _httpService.ping().timeout(const Duration(seconds: 5));
+      } else {
+        // Test MQTT connection
+        if (!_mqttService.isConnected) {
+          throw Exception('MQTT disconnected');
+        }
+      }
+    } catch (e) {
+      // Current connection failed, try to switch to the other mode
+      await _autoSwitchMode();
+    }
+  }
+
+  /// Automatically switch to available connection mode
+  Future<void> _autoSwitchMode() async {
+    final currentMode = _selectedMode;
+
+    try {
+      if (currentMode == ConnectionMode.http) {
+        // HTTP failed, try MQTT
+        print('HTTP connection lost, switching to MQTT...');
+        final connected = await _mqttService.connect();
+        if (connected) {
+          _selectedMode = ConnectionMode.mqtt;
+          print('Successfully switched to MQTT');
+          return;
+        }
+      } else if (currentMode == ConnectionMode.mqtt) {
+        // MQTT failed, try HTTP
+        print('MQTT connection lost, switching to HTTP...');
+        try {
+          await _httpService.ping().timeout(const Duration(seconds: 5));
+          _selectedMode = ConnectionMode.http;
+          print('Successfully switched to HTTP');
+          return;
+        } catch (_) {}
+      }
+    } catch (e) {
+      print('Failed to auto-switch connection mode: $e');
+    }
   }
 
   /// Waits until service is initialized and connection mode is selected
@@ -237,6 +297,7 @@ Future<void> deleteScenario(String scenarioId) async {
 
   /// Reset and reinitialize service (useful for troubleshooting)
   Future<void> reset() async {
+    _healthCheckTimer?.cancel();
     _isInitialized = false;
     _selectedMode = null;
     _mqttService.disconnect();
@@ -245,6 +306,7 @@ Future<void> deleteScenario(String scenarioId) async {
 
   /// Disconnect MQTT connection
   void disconnect() {
+    _healthCheckTimer?.cancel();
     _mqttService.disconnect();
   }
 }

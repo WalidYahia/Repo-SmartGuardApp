@@ -13,13 +13,13 @@ class UnitListItem extends StatefulWidget {
   final Future<void> Function(SensorDTO_Mini) onUpdate;
 
   const UnitListItem({
-    Key? key,
+    super.key,
     required this.unit,
     required this.isExpanded,
     required this.onTap,
     required this.onToggle,
     required this.onUpdate,
-  }) : super(key: key);
+  });
 
   @override
   State<UnitListItem> createState() => _UnitListItemState();

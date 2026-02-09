@@ -6,7 +6,7 @@ import 'users_page.dart';
 import '../widgets/app_footer.dart';
 
 class MasterPage extends StatefulWidget {
-  const MasterPage({Key? key}) : super(key: key);
+  const MasterPage({super.key});
 
   @override
   State<MasterPage> createState() => _MasterPageState();
@@ -194,18 +194,11 @@ class _MasterPageState extends State<MasterPage> {
     final isLocal = _service.selectedMode == ConnectionMode.http;
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      width: 12,
+      height: 12,
       decoration: BoxDecoration(
         color: isLocal ? Colors.blue : Colors.green,
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Text(
-        isLocal ? 'Local' : 'Remote',
-        style: const TextStyle(
-          color: Colors.white,
-          fontSize: 12,
-          fontWeight: FontWeight.bold,
-        ),
+        shape: BoxShape.circle,
       ),
     );
   }
