@@ -155,14 +155,11 @@ class UnifiedSmartHomeService {
     await _ensureInitialized();
 
     if (_selectedMode == ConnectionMode.http) {
-      //return await _httpService.();
+      return await _httpService.fetchScenarios();
     } else {
-      //await _ensureMqttConnected();
-      //return await _mqttService.fetchScenarios();
+      await _ensureMqttConnected();
+      return await _mqttService.fetchScenarios();
     }
-
-    await _ensureMqttConnected();
-    return await _mqttService.fetchScenarios();
   }
 
   /// Fetch all units using the selected connection mode
@@ -182,8 +179,7 @@ Future<UserScenario?> saveScenario(UserScenario scenario) async {
   await _ensureInitialized();
 
   if (_selectedMode == ConnectionMode.http) {
-    // await _httpService.addScenario(scenario);
-    throw Exception('HTTP add/update scenario not implemented');
+    return await _httpService.saveScenario(scenario);
   } else {
     await _ensureMqttConnected();
     return await _mqttService.saveScenario(scenario);
@@ -205,8 +201,7 @@ Future<void> deleteScenario(String scenarioId) async {
   await _ensureInitialized();
 
   if (_selectedMode == ConnectionMode.http) {
-    // await _httpService.deleteScenario(scenarioId);
-    throw Exception('HTTP delete scenario not implemented');
+    await _httpService.deleteScenario(scenarioId);
   } else {
     await _ensureMqttConnected();
     await _mqttService.deleteScenario(scenarioId);

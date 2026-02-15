@@ -20,6 +20,8 @@ class _SmartHomeUnitsPageState extends State<SmartHomeUnitsPage> {
   String? errorMessage;
   StreamSubscription<List<SensorDTO_Mini>>? _devicesSubscription;
   String? _expandedUnitId;
+  Timer? _refreshTimer;
+  bool _isPolling = false;
 
   @override
   void initState() {
@@ -42,6 +44,33 @@ class _SmartHomeUnitsPageState extends State<SmartHomeUnitsPage> {
 
     // Load units
     loadUnits();
+    _startAutoRefresh();
+  }
+
+  void _startAutoRefresh() {
+    _refreshTimer?.cancel();
+    _refreshTimer = Timer.periodic(const Duration(seconds: 5), (_) async {
+      await _pollUnits();
+    });
+  }
+
+  Future<void> _pollUnits() async {
+    if (!mounted) return;
+    if (_isPolling) return;
+    if (_service.selectedMode != ConnectionMode.http) return;
+    _isPolling = true;
+    try {
+      final fetched = await _service.fetchUnits();
+      if (mounted) {
+        setState(() {
+          units = fetched;
+        });
+      }
+    } catch (_) {
+      // ignore errors during polling
+    } finally {
+      _isPolling = false;
+    }
   }
 
   Future<void> loadUnits() async {
@@ -135,6 +164,7 @@ class _SmartHomeUnitsPageState extends State<SmartHomeUnitsPage> {
   @override
   void dispose() {
     _devicesSubscription?.cancel();
+    _refreshTimer?.cancel();
     super.dispose();
   }
 

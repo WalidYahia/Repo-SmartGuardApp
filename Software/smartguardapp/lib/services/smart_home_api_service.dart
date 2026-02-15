@@ -6,6 +6,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../models/sensor_dto_mini.dart';
 import '../models/apiResponse.dart';
+import '../models/user_scenario.dart';
 
 class SmartHomeApiService {
 
@@ -76,15 +77,18 @@ Future<void> ping() async {
 // Toggle unit on/off and return updated sensor data
 Future<SensorDTO_Mini?> toggleUnit(String sensorId, bool currentState) async {
   try {
-      final response = await http.post(
-        Uri.parse('$baseUrl/Devices/handleUserCommand'),
-        headers: _getHeaders(),
-        body: json.encode({
+
+var bb = json.encode({
           'JsonCommandType': currentState ? 1 : 0,
           'CommandPayload': {
             'InstalledSensorId': sensorId
           }
-        }),
+        });
+
+      final response = await http.post(
+        Uri.parse('$baseUrl/Devices/handleUserCommand'),
+        headers: _getHeaders(),
+        body: bb,
       ).timeout(const Duration(seconds: 1));
 
       if (response.statusCode == 200) 
@@ -226,6 +230,69 @@ Future<void> disableInchingMode({
     }
   } catch (e) {
     throw Exception('Error disabling inching mode: $e');
+  }
+}
+
+// Fetch all scenarios via HTTP
+Future<List<UserScenario>> fetchScenarios() async {
+  try { 
+    final response = await http.get(
+      Uri.parse('$baseUrl/UserScenario/loadUserScenarios'),
+      headers: _getHeaders(),
+    ).timeout(const Duration(seconds: 10));
+
+    if (response.statusCode == 200) {
+      final List<dynamic> jsonData = json.decode(response.body);
+      return jsonData.map((json) => UserScenario.fromJson(json)).toList();
+    } else {
+      throw Exception('Failed to load scenarios: ${response.statusCode}');
+    }
+  } catch (e) {
+    throw Exception('Error fetching scenarios: $e');
+  }
+}
+
+// Save (add or update) scenario via HTTP
+Future<UserScenario?> saveScenario(UserScenario scenario) async {
+  try {
+
+    var _body = json.encode(scenario.toJson());
+
+    print(_body);
+
+    final response = await http.post(
+      Uri.parse('$baseUrl/UserScenario/saveUserScenario'),
+      headers: _getHeaders(),
+      body: _body,
+    ).timeout(const Duration(seconds: 10));
+
+    if (response.statusCode == 200) {
+      final jsonData = json.decode(response.body);
+      if (jsonData != null) {
+        return UserScenario.fromJson(jsonData);
+      }
+      return null;
+    } else {
+      throw Exception('Failed to save scenario: ${response.statusCode}');
+    }
+  } catch (e) {
+    throw Exception('Error saving scenario: $e');
+  }
+}
+
+// Delete scenario via HTTP
+Future<void> deleteScenario(String scenarioId) async {
+  try {
+    final response = await http.delete(
+      Uri.parse('$baseUrl/UserScenario/$scenarioId'),
+      headers: _getHeaders(),
+    ).timeout(const Duration(seconds: 10));
+
+    if (response.statusCode != 200 && response.statusCode != 204) {
+      throw Exception('Failed to delete scenario: ${response.statusCode}');
+    }
+  } catch (e) {
+    throw Exception('Error deleting scenario: $e');
   }
 }
 }

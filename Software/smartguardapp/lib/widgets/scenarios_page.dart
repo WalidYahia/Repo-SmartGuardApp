@@ -21,6 +21,8 @@ class _ScenariosPageState extends State<ScenariosPage> {
   List<UserScenario> userScenarios = [];
   bool isLoading = true;
   StreamSubscription<List<UserScenario>>? _scenariosSubscription;
+  Timer? _refreshTimer;
+  bool _isPolling = false;
   String? errorMessage;
 
   @override
@@ -42,6 +44,33 @@ class _ScenariosPageState extends State<ScenariosPage> {
     });
 
     loadScenarios();
+    _startAutoRefresh();
+  }
+
+  void _startAutoRefresh() {
+    _refreshTimer?.cancel();
+    _refreshTimer = Timer.periodic(const Duration(seconds: 5), (_) async {
+      await _pollScenarios();
+    });
+  }
+
+  Future<void> _pollScenarios() async {
+    if (!mounted) return;
+    if (_isPolling) return;
+    if (_service.selectedMode != ConnectionMode.http) return;
+    _isPolling = true;
+    try {
+      final fetched = await _service.fetchScenarios();
+      if (mounted) {
+        setState(() {
+          userScenarios = fetched;
+        });
+      }
+    } catch (_) {
+      // ignore polling errors
+    } finally {
+      _isPolling = false;
+    }
   }
 
   Future<void> loadScenarios() async {
@@ -91,7 +120,8 @@ class _ScenariosPageState extends State<ScenariosPage> {
     );
 
     if (result != null) {
-      // The dialog saves the scenario itself, we only need to show feedback here
+      // Refresh list and show feedback
+      await loadScenarios();
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -112,7 +142,8 @@ class _ScenariosPageState extends State<ScenariosPage> {
     );
 
     if (result != null) {
-      // The dialog saves the scenario itself, we only need to show feedback here
+      // Refresh list and show feedback
+      await loadScenarios();
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -151,6 +182,7 @@ class _ScenariosPageState extends State<ScenariosPage> {
     if (confirmed == true) {
       try {
         await _service.deleteScenario(scenario.id);
+        await loadScenarios(); 
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
@@ -176,6 +208,7 @@ class _ScenariosPageState extends State<ScenariosPage> {
   @override
   void dispose() {
     _scenariosSubscription?.cancel();
+    _refreshTimer?.cancel();
     super.dispose();
   }
 

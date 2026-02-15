@@ -108,12 +108,6 @@ class _UnitListItemState extends State<UnitListItem> {
                             setState(() => isToggling = true);
                             try {
                               await widget.onToggle(newState);
-                            } catch (e) {
-                              if (mounted) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(content: Text('Failed to toggle: $e')),
-                                );
-                              }
                             } finally {
                               if (mounted) {
                                 setState(() => isToggling = false);
