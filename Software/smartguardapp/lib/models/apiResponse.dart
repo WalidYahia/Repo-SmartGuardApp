@@ -1,6 +1,9 @@
+import 'enums.dart';
+export 'enums.dart' show RemoteActionState;
+
 class ApiResponse {
   final String? requestId;
-  final DeviceResponseState state;
+  final RemoteActionState state;
   final dynamic devicePayload;
 
   ApiResponse({
@@ -12,7 +15,7 @@ class ApiResponse {
   factory ApiResponse.fromJson(Map<String, dynamic> json) {
     return ApiResponse(
       requestId: json['requestId'],
-      state: DeviceResponseState.fromInt(json['state'] ?? 1),
+      state: RemoteActionState.fromJson(json['state'] ?? 1),
       devicePayload: json['devicePayload'],
     );
   }
@@ -25,41 +28,11 @@ class ApiResponse {
     };
   }
 
-  bool get isSuccess => state == DeviceResponseState.ok;
-  bool get isError => state == DeviceResponseState.error;
+  bool get isSuccess => state == RemoteActionState.ok;
+  bool get isError => state == RemoteActionState.error;
 
   String get errorMessage {
-    if (devicePayload != null) {
-      return devicePayload.toString();
-    }
+    if (devicePayload != null) return devicePayload.toString();
     return state.description;
-  }
-}
-
-enum DeviceResponseState {
-  ok(0, 'Success'),
-  error(1, 'Error, unit may be not connected'),
-  timeout(3, 'Network Timeout'),
-
-  deviceDataIsRequired(5, 'Device Data Is Required'),
-  deviceAlreadyRegistered(6, 'Device Already Registered'),
-  deviceNameAlreadyRegistered(7, 'Device Name Already Registered'),
-
-  badRequest(4, 'Bad Request'),
-  conflict(8, 'Conflict'),
-  inchingIntervalValidationError(9, 'Inching Interval Validation Error'),
-  emptyPayload(10, 'Empty Payload'),
-  noContent(11, 'No Content');
-
-  final int value;
-  final String description;
-
-  const DeviceResponseState(this.value, this.description);
-
-  static DeviceResponseState fromInt(int value) {
-    return DeviceResponseState.values.firstWhere(
-      (state) => state.value == value,
-      orElse: () => DeviceResponseState.error,
-    );
   }
 }

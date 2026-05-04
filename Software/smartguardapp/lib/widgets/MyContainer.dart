@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import '../services/unified_smart_home_service.dart';
+import '../services/auth_service.dart';
+import '../pages/login_page.dart';
 import 'smart_home_units_page.dart';
 import 'scenarios_page.dart';
 import 'users_page.dart';
@@ -47,6 +49,15 @@ class _MasterPageState extends State<MasterPage> {
         });
       }
     }
+  }
+
+  Future<void> _logout() async {
+    _service.disconnect();
+    await AuthService().logout();
+    if (!mounted) return;
+    Navigator.of(context).pushReplacement(
+      MaterialPageRoute(builder: (_) => const LoginPage()),
+    );
   }
 
   @override
@@ -181,11 +192,14 @@ class _MasterPageState extends State<MasterPage> {
       actions: [
         if (_service.selectedMode != null)
           Padding(
-            padding: const EdgeInsets.only(right: 22),
-            child: Center(
-              child: _connectionBadge(),
-            ),
+            padding: const EdgeInsets.only(right: 8),
+            child: Center(child: _connectionBadge()),
           ),
+        IconButton(
+          icon: const Icon(Icons.logout),
+          tooltip: 'Sign out',
+          onPressed: _logout,
+        ),
       ],
     );
   }
@@ -197,7 +211,7 @@ class _MasterPageState extends State<MasterPage> {
       width: 12,
       height: 12,
       decoration: BoxDecoration(
-        color: isLocal ? Colors.blue : Colors.green,
+        color: isLocal ? Colors.blue : Colors.orange,
         shape: BoxShape.circle,
       ),
     );

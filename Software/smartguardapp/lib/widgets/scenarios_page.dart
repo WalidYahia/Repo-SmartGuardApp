@@ -57,7 +57,6 @@ class _ScenariosPageState extends State<ScenariosPage> {
   Future<void> _pollScenarios() async {
     if (!mounted) return;
     if (_isPolling) return;
-    if (_service.selectedMode != ConnectionMode.http) return;
     _isPolling = true;
     try {
       final fetched = await _service.fetchScenarios();

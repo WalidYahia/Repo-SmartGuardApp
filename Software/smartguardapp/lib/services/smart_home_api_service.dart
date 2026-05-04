@@ -11,10 +11,10 @@ import '../models/user_scenario.dart';
 class SmartHomeApiService {
 
   static const String _ipAddress_pi = '192.168.1.15';
-  static const String _ipAddress = '192.168.1.2';
+  static const String _ipAddress = '192.168.1.5';
   static const int _port = 5000;
   
-  static const String baseUrl = 'http://$_ipAddress_pi:$_port/api';
+  static const String baseUrl = 'http://$_ipAddress:$_port/api';
 
   static const String? authToken = null;
 

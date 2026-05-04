@@ -37,8 +37,8 @@ dependencies:
   cupertino_icons: ^1.0.8
   http: ^1.6.0
   intl: ^0.20.2
-  mqtt_client: ^10.11.3
   uuid: ^4.5.2
+  shared_preferences: ^2.3.0
 
   flutter_launcher_icons: "^0.13.1"
 

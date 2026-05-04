@@ -1,105 +1,13 @@
 // lib/models/user_scenario.dart
 
-enum SwitchOutletStatus {
-  off(0),
-  on(1);
-
-  final int value;
-  const SwitchOutletStatus(this.value);
-
-  static SwitchOutletStatus fromInt(int v) =>
-      v == 1 ? SwitchOutletStatus.on : SwitchOutletStatus.off;
-
-  int toJson() => value;
-}
-
-enum ScenarioLogic {
-  and(0),
-  or(1);
-
-  final int value;
-  const ScenarioLogic(this.value);
-
-  static ScenarioLogic fromInt(int v) =>
-      v == 1 ? ScenarioLogic.or : ScenarioLogic.and;
-
-  int toJson() => value;
-}
-
-enum ScenarioCondition {
-  duration(0),
-  onTime(1),
-  onOtherSensorValue(2);
-
-  final int value;
-  const ScenarioCondition(this.value);
-
-  static ScenarioCondition fromInt(int v) {
-    switch (v) {
-      case 1:
-        return ScenarioCondition.onTime;
-      case 2:
-        return ScenarioCondition.onOtherSensorValue;
-      default:
-        return ScenarioCondition.duration;
-    }
-  }
-
-  int toJson() => value;
-}
-
-enum ScenarioOperator {
-  equals(0),
-  notEquals(1),
-  greaterThan(2),
-  lessThan(3),
-  greaterOrEqual(4),
-  lessOrEqual(5);
-
-  final int value;
-  const ScenarioOperator(this.value);
-
-  static ScenarioOperator fromInt(int v) {
-    switch (v) {
-      case 1:
-        return ScenarioOperator.notEquals;
-      case 2:
-        return ScenarioOperator.greaterThan;
-      case 3:
-        return ScenarioOperator.lessThan;
-      case 4:
-        return ScenarioOperator.greaterOrEqual;
-      case 5:
-        return ScenarioOperator.lessOrEqual;
-      default:
-        return ScenarioOperator.equals;
-    }
-  }
-
-  int toJson() => value;
-}
-
-enum UnitType {
-  unknown(-1),
-  sonoffMiniR3(0),
-  sonoffMiniR4M(1);
-
-  final int value;
-  const UnitType(this.value);
-
-  static UnitType fromInt(int v) {
-    switch (v) {
-      case 0:
-        return UnitType.sonoffMiniR3;
-      case 1:
-        return UnitType.sonoffMiniR4M;
-      default:
-        return UnitType.unknown;
-    }
-  }
-
-  int toJson() => value;
-}
+import 'enums.dart';
+export 'enums.dart'
+    show
+        SwitchOutletStatus,
+        ScenarioLogic,
+        ScenarioCondition,
+        ScenarioOperator,
+        UnitType;
 
 class UserScenarioSensor {
   final String sensorId;
@@ -117,9 +25,9 @@ class UserScenarioSensor {
   factory UserScenarioSensor.fromJson(Map<String, dynamic> json) {
     return UserScenarioSensor(
       sensorId: json['sensorId'] ?? '',
-      sensorType: UnitType.fromInt(json['sensorType'] ?? -1),
+      sensorType: UnitType.fromJson(json['sensorType'] ?? -1),
       value: json['value']?.toString() ?? '',
-      operator: ScenarioOperator.fromInt(json['operator'] ?? 0),
+      operator: ScenarioOperator.fromJson(json['operator'] ?? 0),
     );
   }
 
@@ -148,7 +56,7 @@ class UserScenarioCondition {
 
   factory UserScenarioCondition.fromJson(Map<String, dynamic> json) {
     return UserScenarioCondition(
-      condition: ScenarioCondition.fromInt(json['condition'] ?? 0),
+      condition: ScenarioCondition.fromJson(json['condition'] ?? 0),
       durationInSeconds: json['durationInSeconds'] ?? 0,
       time: json['time'] ?? '00:00:00',
       sensorsDependency: json['sensorsDependency'] != null
@@ -164,8 +72,7 @@ class UserScenarioCondition {
       'condition': condition.toJson(),
       'durationInSeconds': durationInSeconds,
       'time': time,
-      'sensorsDependency':
-          sensorsDependency?.map((s) => s.toJson()).toList(),
+      'sensorsDependency': sensorsDependency?.map((s) => s.toJson()).toList(),
     };
   }
 }
@@ -195,9 +102,8 @@ class UserScenario {
       name: json['name'] ?? '',
       isEnabled: json['isEnabled'] ?? false,
       targetSensorId: json['targetSensorId'] ?? '',
-      action: SwitchOutletStatus.fromInt(json['action'] ?? 0),
-      logicOfConditions:
-          ScenarioLogic.fromInt(json['logicOfConditions'] ?? 0),
+      action: SwitchOutletStatus.fromJson(json['action'] ?? 0),
+      logicOfConditions: ScenarioLogic.fromJson(json['logicOfConditions'] ?? 0),
       conditions: (json['conditions'] as List? ?? [])
           .map((c) => UserScenarioCondition.fromJson(c))
           .toList(),

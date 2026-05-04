@@ -506,7 +506,7 @@ class _AddScenarioDialogState extends State<AddScenarioDialog> {
                                 (s) => s.sensorId == v,
                                 orElse: () => _availableSensors.first,
                               );
-                              sb.sensorType = UnitType.fromInt(selectedSensor.type);
+                              sb.sensorType = selectedSensor.sensorType;
                               if (_isSwitchType(sb.sensorType) &&
                                   sb.value != '0' &&
                                   sb.value != '1') {

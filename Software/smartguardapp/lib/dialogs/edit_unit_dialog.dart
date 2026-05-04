@@ -88,7 +88,7 @@ void dispose() {
         
         // Call service to update name via API/MQTT
         await _service.updateUnitName(
-          sensorId: widget.unit.sensorId,
+          sensorId: widget.unit.id,
           name: newName,
         );
         
@@ -143,14 +143,14 @@ void dispose() {
       final durationInMs = _inchingDurationSec * 1000;
 
       await _service.enableInchingMode(
-        sensorId: widget.unit.sensorId,
+        sensorId: widget.unit.id,
         unitId: widget.unit.unitId,
         inchingTimeInMs: durationInMs,
       );
     } else {
       // Turn inching mode OFF
       await _service.disableInchingMode(
-        sensorId: widget.unit.sensorId,
+        sensorId: widget.unit.id,
         unitId: widget.unit.unitId,
       );
     }

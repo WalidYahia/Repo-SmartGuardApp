@@ -1,6 +1,7 @@
+import 'dart:async';
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:smartguardapp/models/sensor_dto_mini.dart';
-import 'dart:async';
 import '../services/unified_smart_home_service.dart';
 import '../widgets/unit_list_item.dart';
 
@@ -57,10 +58,12 @@ class _SmartHomeUnitsPageState extends State<SmartHomeUnitsPage> {
   Future<void> _pollUnits() async {
     if (!mounted) return;
     if (_isPolling) return;
-    if (_service.selectedMode != ConnectionMode.http) return;
     _isPolling = true;
     try {
       final fetched = await _service.fetchUnits();
+
+      print("********* fetched: ${json.encode(fetched.map((e) => e.toJson()).toList())}");
+
       if (mounted) {
         setState(() {
           units = fetched;
@@ -105,19 +108,34 @@ class _SmartHomeUnitsPageState extends State<SmartHomeUnitsPage> {
     }
   }
 
-  Future<void> toggleUnit(String sensorId, bool newState) async {
+  Future<void> toggleUnit(String id, bool newState) async {
+    final index = units.indexWhere((u) => u.id == id);
+    final original = index != -1 ? units[index] : null;
+
+    if (index != -1) {
+      setState(() {
+        units[index] = units[index].copyWith(lastReading: newState ? '1' : '0');
+      });
+    }
+
     try {
-      final updatedSensor = await _service.toggleUnit(sensorId, newState);
-      
-      if (updatedSensor != null) {
+      print("********* New State: $newState");
+
+      final updatedSensor = await _service.toggleUnit(id, newState);
+
+      if (updatedSensor != null && mounted) {
         setState(() {
-          final index = units.indexWhere((u) => u.sensorId == sensorId);
-          if (index != -1) {
-            units[index] = updatedSensor;
-          }
+          final i = units.indexWhere((u) => u.id == id);
+          if (i != -1) units[i] = updatedSensor;
         });
       }
     } catch (e) {
+      if (original != null && mounted) {
+        setState(() {
+          final i = units.indexWhere((u) => u.id == id);
+          if (i != -1) units[i] = original;
+        });
+      }
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -237,7 +255,7 @@ class _SmartHomeUnitsPageState extends State<SmartHomeUnitsPage> {
                 }
               });
             },
-            onToggle: (newState) => toggleUnit(unit.sensorId, unit.isOn),
+            onToggle: (newState) => toggleUnit(unit.id, newState),
             onUpdate: updateUnit,
           );
         },
