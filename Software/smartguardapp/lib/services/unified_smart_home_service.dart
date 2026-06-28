@@ -7,7 +7,7 @@ import 'smart_home_api_service.dart';
 import 'syncro_cloud_service.dart';
 
 enum ConnectionMode {
-  http,   // Direct HTTP to local hub (LAN)
+  local,   // Direct HTTP to local hub (LAN)
   cloud,  // SyncroCloud REST API (remote)
 }
 
@@ -44,7 +44,7 @@ class UnifiedSmartHomeService {
 
     try {
       await _httpService.ping().timeout(const Duration(seconds: 5));
-      _selectedMode = ConnectionMode.http;
+      _selectedMode = ConnectionMode.local;
     } catch (_) {
       try {
         await _cloudService.ping().timeout(const Duration(seconds: 10));
@@ -68,7 +68,7 @@ class UnifiedSmartHomeService {
     if (!_isInitialized || _selectedMode == null) return;
 
     try {
-      if (_selectedMode == ConnectionMode.http) {
+      if (_selectedMode == ConnectionMode.local) {
         await _httpService.ping().timeout(const Duration(seconds: 5));
       } else {
         await _cloudService.ping().timeout(const Duration(seconds: 10));
@@ -80,12 +80,12 @@ class UnifiedSmartHomeService {
 
   Future<void> _autoSwitchMode() async {
     try {
-      if (_selectedMode == ConnectionMode.http) {
+      if (_selectedMode == ConnectionMode.local) {
         await _cloudService.ping().timeout(const Duration(seconds: 10));
         _selectedMode = ConnectionMode.cloud;
       } else {
         await _httpService.ping().timeout(const Duration(seconds: 5));
-        _selectedMode = ConnectionMode.http;
+        _selectedMode = ConnectionMode.local;
       }
     } catch (_) {
       // both unreachable — keep current mode, retry on next tick
@@ -105,34 +105,44 @@ class UnifiedSmartHomeService {
 
   Future<List<SensorDTO_Mini>> fetchUnits() async {
     await _ensureInitialized();
-    return _selectedMode == ConnectionMode.http
+    return _selectedMode == ConnectionMode.local
         ? await _httpService.fetchUnits()
         : await _cloudService.fetchUnits();
   }
 
   Future<List<UserScenario>> fetchScenarios() async {
     await _ensureInitialized();
-    return _selectedMode == ConnectionMode.http
+    return _selectedMode == ConnectionMode.local
         ? await _httpService.fetchScenarios()
         : await _cloudService.fetchScenarios();
   }
 
-  Future<UserScenario?> saveScenario(UserScenario scenario) async {
+  Future<UserScenario?> addScenario(UserScenario scenario) async {
     await _ensureInitialized();
-    return _selectedMode == ConnectionMode.http
+    return _selectedMode == ConnectionMode.local
         ? await _httpService.saveScenario(scenario)
-        : await _cloudService.saveScenario(scenario);
+        : await _cloudService.createScenario(scenario);
   }
 
-  Future<UserScenario?> addScenario(UserScenario scenario) =>
-      saveScenario(scenario);
+  Future<UserScenario?> updateScenario(UserScenario scenario) async {
+    await _ensureInitialized();
+    return _selectedMode == ConnectionMode.local
+        ? await _httpService.saveScenario(scenario)
+        : await _cloudService.updateScenario(scenario);
+  }
 
-  Future<UserScenario?> updateScenario(UserScenario scenario) =>
-      saveScenario(scenario);
+  Future<UserScenario> fetchScenario(String scenarioId) async {
+    await _ensureInitialized();
+    if (_selectedMode == ConnectionMode.local) {
+      final scenarios = await _httpService.fetchScenarios();
+      return scenarios.firstWhere((s) => s.id == scenarioId);
+    }
+    return await _cloudService.fetchScenario(scenarioId);
+  }
 
   Future<void> deleteScenario(String scenarioId) async {
     await _ensureInitialized();
-    if (_selectedMode == ConnectionMode.http) {
+    if (_selectedMode == ConnectionMode.local) {
       await _httpService.deleteScenario(scenarioId);
     } else {
       await _cloudService.deleteScenario(scenarioId);
@@ -141,7 +151,7 @@ class UnifiedSmartHomeService {
 
   Future<SensorDTO_Mini?> toggleUnit(String sensorId, bool newState) async {
     await _ensureInitialized();
-    return _selectedMode == ConnectionMode.http
+    return _selectedMode == ConnectionMode.local
         ? await _httpService.toggleUnit(sensorId, newState)
         : await _cloudService.toggleUnit(sensorId, newState);
   }
@@ -151,7 +161,7 @@ class UnifiedSmartHomeService {
     required String name,
   }) async {
     await _ensureInitialized();
-    if (_selectedMode == ConnectionMode.http) {
+    if (_selectedMode == ConnectionMode.local) {
       await _httpService.updateUnitName(sensorId: sensorId, name: name);
     } else {
       await _cloudService.updateUnitName(sensorId: sensorId, name: name);
@@ -164,7 +174,7 @@ class UnifiedSmartHomeService {
     required int inchingTimeInMs,
   }) async {
     await _ensureInitialized();
-    if (_selectedMode == ConnectionMode.http) {
+    if (_selectedMode == ConnectionMode.local) {
       await _httpService.enableInchingMode(
           sensorId: sensorId,
           unitId: unitId,
@@ -182,7 +192,7 @@ class UnifiedSmartHomeService {
     required String unitId,
   }) async {
     await _ensureInitialized();
-    if (_selectedMode == ConnectionMode.http) {
+    if (_selectedMode == ConnectionMode.local) {
       await _httpService.disableInchingMode(sensorId: sensorId, unitId: unitId);
     } else {
       await _cloudService.disableInchingMode(

@@ -109,7 +109,7 @@ class _SmartHomeUnitsPageState extends State<SmartHomeUnitsPage> {
   }
 
   Future<void> toggleUnit(String id, bool newState) async {
-    final index = units.indexWhere((u) => u.id == id);
+    final index = units.indexWhere((u) => u.sensorConfigId == id);
     final original = index != -1 ? units[index] : null;
 
     if (index != -1) {
@@ -125,14 +125,14 @@ class _SmartHomeUnitsPageState extends State<SmartHomeUnitsPage> {
 
       if (updatedSensor != null && mounted) {
         setState(() {
-          final i = units.indexWhere((u) => u.id == id);
+          final i = units.indexWhere((u) => u.sensorConfigId == id);
           if (i != -1) units[i] = updatedSensor;
         });
       }
     } catch (e) {
       if (original != null && mounted) {
         setState(() {
-          final i = units.indexWhere((u) => u.id == id);
+          final i = units.indexWhere((u) => u.sensorConfigId == id);
           if (i != -1) units[i] = original;
         });
       }
@@ -243,19 +243,19 @@ class _SmartHomeUnitsPageState extends State<SmartHomeUnitsPage> {
         itemBuilder: (context, index) {
           final unit = units[index];
           return UnitListItem(
-            key: ValueKey(unit.sensorId), // ✅ Add this
+            key: ValueKey(unit.sensorConfigId), // ✅ Add this
             unit: unit,
-            isExpanded: _expandedUnitId == unit.sensorId,
+            isExpanded: _expandedUnitId == unit.sensorConfigId,
             onTap: () {
               setState(() {
-                if (_expandedUnitId == unit.sensorId) {
+                if (_expandedUnitId == unit.sensorConfigId) {
                   _expandedUnitId = null; // Collapse if already expanded
                 } else {
-                  _expandedUnitId = unit.sensorId; // Expand this unit
+                  _expandedUnitId = unit.sensorConfigId; // Expand this unit
                 }
               });
             },
-            onToggle: (newState) => toggleUnit(unit.id, newState),
+            onToggle: (newState) => toggleUnit(unit.sensorConfigId, newState),
             onUpdate: updateUnit,
           );
         },

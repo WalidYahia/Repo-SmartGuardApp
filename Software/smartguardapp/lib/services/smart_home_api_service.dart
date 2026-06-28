@@ -11,7 +11,7 @@ import '../models/user_scenario.dart';
 class SmartHomeApiService {
 
   static const String _ipAddress_pi = '192.168.1.15';
-  static const String _ipAddress = '192.168.1.5';
+  static const String _ipAddress = 'localhost';
   static const int _port = 5000;
   
   static const String baseUrl = 'http://$_ipAddress:$_port/api';
@@ -75,11 +75,11 @@ Future<void> ping() async {
 }
 
 // Toggle unit on/off and return updated sensor data
-Future<SensorDTO_Mini?> toggleUnit(String sensorId, bool currentState) async {
+Future<SensorDTO_Mini?> toggleUnit(String sensorId, bool newState) async {
   try {
 
 var bb = json.encode({
-          'JsonCommandType': currentState ? 1 : 0,
+          'JsonCommandType': newState ? 0 : 1,
           'CommandPayload': {
             'InstalledSensorId': sensorId
           }

@@ -205,15 +205,19 @@ class _MasterPageState extends State<MasterPage> {
   }
 
   Widget _connectionBadge() {
-    final isLocal = _service.selectedMode == ConnectionMode.http;
+    final isLocal = _service.selectedMode == ConnectionMode.local;
 
-    return Container(
-      width: 12,
-      height: 12,
-      decoration: BoxDecoration(
-        color: isLocal ? Colors.blue : Colors.orange,
-        shape: BoxShape.circle,
-      ),
-    );
+    if (isLocal) {
+      return Container(
+        width: 12,
+        height: 12,
+        decoration: const BoxDecoration(
+          color: Colors.blue,
+          shape: BoxShape.circle,
+        ),
+      );
+    }
+
+    return const Icon(Icons.cloud, color: Colors.greenAccent, size: 14);
   }
 }

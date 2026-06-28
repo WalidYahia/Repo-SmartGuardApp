@@ -78,13 +78,34 @@ class _AddScenarioDialogState extends State<AddScenarioDialog> {
         if (widget.scenario != null) {
           final s = widget.scenario!;
           _nameController.text = s.name;
-          _selectedTargetSensor = s.targetSensorId;
+          // Match case/whitespace-insensitively (backend ids have been
+          // inconsistent between endpoints), then use the matched sensor's
+          // own sensorId so it's == one of the dropdown's item values —
+          // otherwise the dropdown shows no selection (or, before this was
+          // guarded, crashed with an assertion error).
+          _selectedTargetSensor = _findSensorId(sensors, s.targetSensorId);
           _action = s.action;
           _isEnabled = s.isEnabled;
           _logic = s.logicOfConditions;
           _conditions = s.conditions.isEmpty
               ? [_ConditionBuilder()]
               : s.conditions.map((c) => _ConditionBuilder.from(c)).toList();
+
+          // Same matching for each "On Other Sensor Value" dependency: drop
+          // sensor ids that no longer exist or now match the target sensor
+          // (the dropdown excludes the target sensor from its items).
+          for (final cb in _conditions) {
+            for (final sb in cb.sensors) {
+              final matched = sb.sensorId == null
+                  ? null
+                  : _findSensorId(sensors, sb.sensorId!);
+              sb.sensorId =
+                  matched == _selectedTargetSensor ? null : matched;
+              if (sb.sensorId == null) {
+                sb.sensorType = null;
+              }
+            }
+          }
 
           // If editing and action is "On", convert any Duration conditions (Duration isn't allowed for "On")
           if (_action == SwitchOutletStatus.on) {
@@ -270,7 +291,7 @@ class _AddScenarioDialogState extends State<AddScenarioDialog> {
                     errorText: _targetSensorError,
                   ),
                   items: _availableSensors.map((s) => DropdownMenuItem(
-                    value: s.sensorId,
+                    value: s.sensorConfigId,
                     child: Text(s.name, overflow: TextOverflow.ellipsis),
                   )).toList(),
                   onChanged: (v) => setState(() {
@@ -491,9 +512,9 @@ class _AddScenarioDialogState extends State<AddScenarioDialog> {
                             errorText: _sensorDepErrors['${index}_${sidx}_sensor'],
                           ),
                           items: _availableSensors
-                              .where((s) => s.sensorId != _selectedTargetSensor)
+                              .where((s) => s.sensorConfigId != _selectedTargetSensor)
                               .map((s) => DropdownMenuItem(
-                                    value: s.sensorId,
+                                    value: s.sensorConfigId,
                                     child: Text(s.name, overflow: TextOverflow.ellipsis),
                                   ))
                               .toList(),
@@ -503,7 +524,7 @@ class _AddScenarioDialogState extends State<AddScenarioDialog> {
                             _sensorDepErrors.remove('${index}_${sidx}_value');
                             if (v != null) {
                               final selectedSensor = _availableSensors.firstWhere(
-                                (s) => s.sensorId == v,
+                                (s) => s.sensorConfigId == v,
                                 orElse: () => _availableSensors.first,
                               );
                               sb.sensorType = selectedSensor.sensorType;
@@ -611,6 +632,17 @@ class _AddScenarioDialogState extends State<AddScenarioDialog> {
 
   bool _isSwitchType(UnitType? t) =>
       t == UnitType.sonoffMiniR3 || t == UnitType.sonoffMiniR4M;
+
+  /// Finds [sensorId] among [sensors] case/whitespace-insensitively and
+  /// returns the sensor's own id (so callers get a value that is `==` to
+  /// the one used as a DropdownMenuItem's value), or null if not found.
+  String? _findSensorId(List<SensorDTO_Mini> sensors, String sensorId) {
+    final needle = sensorId.trim().toLowerCase();
+    for (final sn in sensors) {
+      if (sn.sensorConfigId.trim().toLowerCase() == needle) return sn.sensorConfigId;
+    }
+    return null;
+  }
 }
 
 class _ConditionBuilder {

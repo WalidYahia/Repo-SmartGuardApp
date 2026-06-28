@@ -66,23 +66,26 @@ class SyncroCloudService {
 
     if (response.statusCode == 200) {
       final List<dynamic> data = json.decode(response.body) as List<dynamic>;
-      final result = <UserScenario>[];
-      for (final item in data) {
-        try {
-          final payloadStr =
-              (item as Map<String, dynamic>)['payload'] as String? ?? '';
-          if (payloadStr.isNotEmpty) {
-            final payloadJson =
-                json.decode(payloadStr) as Map<String, dynamic>;
-            result.add(UserScenario.fromJson(payloadJson));
-          }
-        } catch (_) {
-          // skip entries that can't be parsed
-        }
-      }
-      return result;
+      return data
+          .map((e) => UserScenario.fromJson(e as Map<String, dynamic>))
+          .toList();
     }
     _throwHttpError(response);
+  }
+
+  Future<UserScenario> fetchScenario(String scenarioId) async {
+    final response = await http
+        .get(
+          Uri.parse('$_baseUrl/devicescenarios/device/$_hubId/$scenarioId'),
+          headers: await _headers(),
+        )
+        .timeout(const Duration(seconds: 10));
+
+    if (response.statusCode == 200) {
+      return UserScenario.fromJson(
+          json.decode(response.body) as Map<String, dynamic>);
+    }
+    _throwScenarioError(response);
   }
 
   Future<SensorDTO_Mini?> toggleUnit(String sensorId, bool newState) async {
@@ -100,6 +103,7 @@ class SyncroCloudService {
         final apiResponse = ApiResponse.fromJson(json.decode(response.body));
         if (apiResponse.isSuccess) {
           if (apiResponse.devicePayload != null) {
+            print("********* Cloud toggleUnit: ${json.encode(apiResponse.devicePayload)}");
             return SensorDTO_Mini.fromJson(apiResponse.devicePayload);
           }
           return null;
@@ -176,30 +180,49 @@ class SyncroCloudService {
     _throwRemoteActionError(response);
   }
 
-  Future<UserScenario?> saveScenario(UserScenario scenario) async {
+  Future<UserScenario> createScenario(UserScenario scenario) async {
+    final response = await http
+        .post(
+          Uri.parse('$_baseUrl/devicescenarios/device/$_hubId'),
+          headers: await _headers(),
+          body: json.encode(scenario.copyWith(id: '').toJson()),
+        )
+        .timeout(const Duration(seconds: 10));
+
+    if (response.statusCode == 200 || response.statusCode == 201) {
+      return UserScenario.fromJson(
+          json.decode(response.body) as Map<String, dynamic>);
+    }
+    _throwScenarioError(response);
+  }
+
+  Future<UserScenario> updateScenario(UserScenario scenario) async {
     final response = await http
         .put(
-          Uri.parse('$_baseUrl/remote-actions/$_hubId/scenarios'),
+          Uri.parse(
+              '$_baseUrl/devicescenarios/device/$_hubId/${scenario.id}'),
           headers: await _headers(),
           body: json.encode(scenario.toJson()),
         )
         .timeout(const Duration(seconds: 10));
 
-    if (response.statusCode == 200) return null;
-    _throwRemoteActionError(response);
+    if (response.statusCode == 200) {
+      return UserScenario.fromJson(
+          json.decode(response.body) as Map<String, dynamic>);
+    }
+    _throwScenarioError(response);
   }
 
   Future<void> deleteScenario(String scenarioId) async {
     final response = await http
         .delete(
-          Uri.parse(
-              '$_baseUrl/remote-actions/$_hubId/scenarios/$scenarioId'),
+          Uri.parse('$_baseUrl/devicescenarios/device/$_hubId/$scenarioId'),
           headers: await _headers(),
         )
         .timeout(const Duration(seconds: 10));
 
-    if (response.statusCode == 200) return;
-    _throwRemoteActionError(response);
+    if (response.statusCode == 204 || response.statusCode == 200) return;
+    _throwScenarioError(response);
   }
 
   Never _throwHttpError(http.Response response) {
@@ -220,5 +243,20 @@ class SyncroCloudService {
       default:
         throw Exception('Remote action failed: ${response.statusCode}');
     }
+  }
+
+  Never _throwScenarioError(http.Response response) {
+    if (response.statusCode == 401) {
+      throw Exception('Unauthorized. Please log in again.');
+    }
+    if (response.statusCode == 404) {
+      String message = 'Scenario not found';
+      try {
+        final body = json.decode(response.body) as Map<String, dynamic>;
+        message = body['message']?.toString() ?? message;
+      } catch (_) {}
+      throw Exception(message);
+    }
+    throw Exception('Request failed: ${response.statusCode}');
   }
 }
